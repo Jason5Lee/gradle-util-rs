@@ -16,4 +16,4 @@ Example:
 
 ### `update`
 
-This command can update the gradle version in the gradle wrapper properties file. You can set one or multiple gradle versions. If there is a version having the same major and minor number and having a higher patch number (i.e. if the version in your wrapper properties is `a.b.c`, then it will be updated to any version you set that is `a.b.d` which `d > c`. If the version in your wrappe properties is `a.b`, then it will be updated to any version that is `a.b.c`).
+This command can update the gradle version in the gradle wrapper properties file. You can set one or multiple gradle versions. If your project gradle version is `a.b.c` or `a.b`, and one of the version you set is `a.b.d` where `d > c`, it will update the gradle version in the wrapper properties file to `a.b.d`.
