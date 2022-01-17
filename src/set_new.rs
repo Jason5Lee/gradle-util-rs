@@ -1,6 +1,5 @@
 use notify::{DebouncedEvent, RecursiveMode, Watcher};
-use std::ffi::OsStr;
-use std::path::PathBuf;
+use std::{ffi::OsStr, path::Path};
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -64,7 +63,7 @@ zipStorePath=wrapper/dists"#,
     )
 }
 
-fn write_wrapper_properties(path: &PathBuf, version: &str) -> Result<(), Logged> {
+fn write_wrapper_properties(path: &Path, version: &str) -> Result<(), Logged> {
     std::fs::write(path, wrapper_properties_content(version)).map_err(|err| {
         log_error!(
             "Error while writing to gradle wrapper properties file. {}.",

@@ -13,7 +13,3 @@ This is made as a workaround of [IDEA-177325](https://youtrack.jetbrains.com/iss
 Example:
 
 `gur set-new --watch-dir path1 --watch-dir path2 --gradle-version 7.3` : watch the gradle project creation under `path1` and `path2` recursively, and create the gradle wrapper properties for the new projects using gradle version `7.3`.
-
-### `update`
-
-This command can update the gradle version in the gradle wrapper properties file. You can set one or multiple gradle versions. If your project gradle version is `a.b.c` or `a.b`, and one of the version you set is `a.b.d` where `d > c`, it will update the gradle version in the wrapper properties file to `a.b.d`.

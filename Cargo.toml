@@ -1,6 +1,6 @@
 [package]
 name = "gradle-util-rs"
-version = "0.1.0-alpha.0"
+version = "0.1.0-alpha.1"
 edition = "2021"
 description = "Gradle util written in Rust"
 repository = "https://github.com/jason5lee/gradle-util-rs"
@@ -10,12 +10,9 @@ keywords = [ "gradle" ]
 
 [dependencies]
 log = "0.4"
-home = "0.5"
 notify = "4.0"
 env_logger = "0.9"
 clap = { version = "3.0", features = ["derive"] }
-once_cell = "1.9"
-regex = "1.5"
 humantime = "2.1"
 
 [[bin]]
