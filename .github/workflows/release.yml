@@ -147,7 +147,7 @@ jobs:
         if: matrix.target == 'armv7-unknown-linux-gnueabihf'
         run: |
           cd target/${{ matrix.target }}/release
-          tar czvf ../../../${{ matrix.name }} gurr
+          tar czvf ../../../${{ matrix.name }} gur
           cd -
 
       - name: Post Setup | Prepare checksums [Windows]
