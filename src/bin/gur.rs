@@ -23,7 +23,7 @@ enum Command {
         watch_dir: Vec<String>,
         #[clap(long, default_value = "1s", parse(try_from_str = humantime::parse_duration), help = "Duration of file watching delay. Default to 1 second.")]
         watch_duration: Duration,
-    }
+    },
 }
 
 fn main() {

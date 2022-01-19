@@ -1,7 +1,7 @@
 use notify::{DebouncedEvent, RecursiveMode, Watcher};
-use std::{ffi::OsStr, path::Path};
 use std::sync::mpsc;
 use std::time::Duration;
+use std::{ffi::OsStr, path::Path};
 
 use crate::{Logged, LoggedSideEffect};
 

@@ -1,0 +1,183 @@
+name: Release
+on:
+  release: 
+    types: [published]
+
+jobs:
+  dependencies:
+    name: cargo build --dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - armv7-unknown-linux-gnueabihf
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macOS-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup | Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          target: ${{ matrix.target }}
+
+      - id: cargo-cache
+        name: cache
+        uses: austinjones/rust-cache@v1
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: Setup | musl tools
+        if: steps.cargo-cache.outputs.cache-hit != 'true' && matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt install -y musl-tools
+
+      - name: Setup | armv7 tools
+        if: steps.cargo-cache.outputs.cache-hit != 'true' && matrix.target == 'armv7-unknown-linux-gnueabihf'
+        run: |
+          sudo apt install -y build-essential gcc-arm-linux-gnueabihf
+          echo '[target.armv7-unknown-linux-gnueabihf]' >> ~/.cargo/config
+          echo 'linker = "arm-linux-gnueabihf-gcc"' >> ~/.cargo/config
+
+      - name: Build | Dependencies
+        if: steps.cargo-cache.outputs.cache-hit != 'true' 
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build | Dev Dependencies
+        if: steps.cargo-cache.outputs.cache-hit != 'true' && matrix.target != 'armv7-unknown-linux-gnueabihf'
+        run: cargo test --release --target ${{ matrix.target }} --no-run
+
+  binaries:
+    name: cargo build
+    needs: dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - armv7-unknown-linux-gnueabihf
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: gur-x86_64-linux-gnu.tar.gz
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            name: gur-x86_64-linux-musl.tar.gz
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            name: gur-armv7-linux-gnueabihf.tar.gz
+          - target: x86_64-apple-darwin
+            os: macOS-latest
+            name: gur-x86_64-osx.tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: gur-x86_64-windows.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup | Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          target: ${{ matrix.target }}
+
+      - id: cargo-cache
+        name: cache
+        uses: austinjones/rust-cache@v1
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: Setup | musl tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt install -y musl-tools
+
+      - name: Setup | armv7 tools
+        if: matrix.target == 'armv7-unknown-linux-gnueabihf'
+        run: |
+          sudo apt install -y build-essential gcc-arm-linux-gnueabihf
+          echo '[target.armv7-unknown-linux-gnueabihf]' >> ~/.cargo/config
+          echo 'linker = "arm-linux-gnueabihf-gcc"' >> ~/.cargo/config
+
+      - name: Build | Integration Tests
+        if: matrix.target != 'armv7-unknown-linux-gnueabihf'
+        run: cargo test --release --target ${{ matrix.target }} -- --nocapture
+
+      - name: Build | Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Post Setup | Prepare artifacts [Windows]
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          strip gur.exe
+          7z a ../../../${{ matrix.name }} gur.exe
+          cd -
+
+      - name: Post Setup | Prepare artifacts [-nix]
+        if: matrix.target != 'armv7-unknown-linux-gnueabihf' && matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          strip gur
+          tar czvf ../../../${{ matrix.name }} gur
+          cd -
+
+      - name: Post Setup | Prepare artifacts [-nix]
+        if: matrix.target == 'armv7-unknown-linux-gnueabihf'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czvf ../../../${{ matrix.name }} gurr
+          cd -
+
+      - name: Post Setup | Prepare checksums [Windows]
+        if: matrix.os == 'windows-latest'
+        run: Get-FileHash "${{ matrix.name }}" | Format-List > "${{ matrix.name }}.sha256"
+
+      - name: Post Setup | Prepare checksums [-nix]
+        if: matrix.os != 'windows-latest'
+        run: openssl dgst -sha256 -r "${{ matrix.name }}" | awk '{print $1}' > "${{ matrix.name }}.sha256"
+
+      - name: Post Setup | Upload artifacts
+        uses: AButler/upload-release-assets@v2.0
+        with:
+          files: '${{ matrix.name }}*'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  crates_io:
+    name: crates.io publish
+    needs: binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: cargo publish
+        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
