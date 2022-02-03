@@ -1,12 +1,11 @@
 use notify::{DebouncedEvent, RecursiveMode, Watcher};
 use std::sync::mpsc;
 use std::time::Duration;
-use std::{ffi::OsStr, path::Path};
+use std::ffi::OsStr;
 
-use crate::{Logged, LoggedSideEffect};
+use crate::{Logged, LoggedSideEffect, utils};
 
 const GRADDLE_PROPERTIES_FILENAME: &str = "gradle.properties";
-const WRAPPER_PROPERTIES_FILENAME: &str = "gradle-wrapper.properties";
 
 pub fn set_new(
     watch_dirs: Vec<String>,
@@ -29,15 +28,15 @@ pub fn set_new(
                     path.pop();
                     log::info!("New gradle project detected at: {:?}.", path);
 
-                    path.push("gradle/wrapper");
+                    path.push(utils::WRAPPER_PROPERTIES_DIR);
 
                     (|| -> Result<(), Logged> {
                         std::fs::create_dir_all(&path).map_err(|err| {
                             log_error!("Failed to create directory `{:?}`. {}", path, err)
                         })?;
 
-                        path.push(WRAPPER_PROPERTIES_FILENAME);
-                        write_wrapper_properties(&path, &version)
+                        path.push(utils::WRAPPER_PROPERTIES_FILENAME);
+                        utils::write_wrapper_properties(&path, &version)
                     })()
                     .ignore_logged_error();
                 }
@@ -50,24 +49,4 @@ pub fn set_new(
             _ => {}
         }
     }
-}
-
-fn wrapper_properties_content(version: &str) -> String {
-    format!(
-        r#"distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-{}-bin.zip
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists"#,
-        version
-    )
-}
-
-fn write_wrapper_properties(path: &Path, version: &str) -> Result<(), Logged> {
-    std::fs::write(path, wrapper_properties_content(version)).map_err(|err| {
-        log_error!(
-            "Error while writing to gradle wrapper properties file. {}.",
-            err
-        )
-    })
 }

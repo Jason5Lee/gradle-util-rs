@@ -14,7 +14,13 @@ You can find the pre-built binaries at the [release page](https://github.com/jas
 USAGE:
     gur <SUBCOMMAND>
 
+OPTIONS:
+    -h, --help       Print help information
+    -V, --version    Print version information
+
 SUBCOMMANDS:
+    chver      Change the gradle wrapper version
+    help       Print this message or the help of the given subcommand(s)
     set-new    Watch for the new Gradle project and set the gradle version
 ```
 
@@ -24,4 +30,12 @@ This is made as a workaround of [IDEA-177325](https://youtrack.jetbrains.com/iss
 
 Example:
 
-`gur set-new --watch-dir path1 --watch-dir path2 --gradle-version 7.3` : watch the gradle project creation under `path1` and `path2` recursively, and create the gradle wrapper properties for the new projects using gradle version `7.3`.
+`gur set-new 7.3.3 --watch-dir path1 --watch-dir path2` : watch the gradle project creation under `path1` and `path2` recursively, and create the gradle wrapper properties for the new projects using gradle version `7.3.3`.
+
+### `update`
+
+This subcommand is to update the gradle wrapper version of the current project.
+Without the `--yolo` flag, it essentially calls the `./gradlew wrapper --gradle-version <version>` .
+
+When the `yolo` flag is enabled, it will first update the content of `gradle-wrapper.properties` to using the new version,
+then run the wrapper task. In this way, the gradle distribution of the old version won't be downloaded. But it may have potential problems.
