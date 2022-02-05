@@ -27,6 +27,6 @@ impl LoggedSideEffect for Result<(), Logged> {
     fn ignore_logged_error(self) {}
 }
 
-pub mod set_new;
 pub mod chver;
+pub mod set_new;
 pub(crate) mod utils;

@@ -29,7 +29,10 @@ enum Command {
     Chver {
         #[clap(help = "The version you want to change to.")]
         version: String,
-        #[clap(long, help = "Enable the yolo mode. It will change the gradle-wrapper.properties file before running the wrapper task. With this flag, the gradle distribution of the old version won't be downloaded. But it may have potential problems.")]
+        #[clap(
+            long,
+            help = "Enable the yolo mode. It will change the gradle-wrapper.properties file before running the wrapper task. With this flag, the gradle distribution of the old version won't be downloaded. But it may have potential problems."
+        )]
         yolo: bool,
     },
 }

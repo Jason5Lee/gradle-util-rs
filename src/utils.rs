@@ -1,5 +1,5 @@
-use std::path::Path;
 use crate::Logged;
+use std::path::Path;
 
 pub const WRAPPER_PROPERTIES_FILENAME: &str = "gradle-wrapper.properties";
 pub const WRAPPER_PROPERTIES_DIR: &str = "gradle/wrapper";

@@ -1,9 +1,9 @@
 use notify::{DebouncedEvent, RecursiveMode, Watcher};
+use std::ffi::OsStr;
 use std::sync::mpsc;
 use std::time::Duration;
-use std::ffi::OsStr;
 
-use crate::{Logged, LoggedSideEffect, utils};
+use crate::{utils, Logged, LoggedSideEffect};
 
 const GRADDLE_PROPERTIES_FILENAME: &str = "gradle.properties";
 
