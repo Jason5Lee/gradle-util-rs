@@ -35,9 +35,19 @@ Example:
 ### `chver`
 
 This subcommand is to update the gradle wrapper version of the current project.
-Without the `--yolo` flag, it essentially calls the `./gradlew wrapper --gradle-version <version>` .
+It essentially calls the `./gradlew wrapper --gradle-version <version>` .
 
 When the `yolo` flag is enabled, it will first update the content of `gradle-wrapper.properties` to using the new version,
 then run the wrapper task. In this way, the gradle distribution of the old version won't be downloaded. But it may have potential problems.
 
 Example: `gur chver 7.3.3 --yolo`
+
+## Why Rust?
+
+You might be surprised that a Gradle utility is written in Rust instead of Java or other JVM languages.
+The major reason is that Gradle already requires a java instance to run. I don't want yet another java process.
+Instead, just keep it as light as possible.
+
+The reason I choose Rust instead of C/C++ or any others is that its mental model is surprisingly closed to Kotlin, the
+major language I used with Gradle. Many building blocks in Kotlin like data class, sealed class and nullable type have their
+corresponding in Rust like struct, enum and option.
