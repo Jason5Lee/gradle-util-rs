@@ -1,38 +1,45 @@
 use notify::{DebouncedEvent, RecursiveMode, Watcher};
 use std::ffi::OsStr;
-use std::sync::mpsc;
 use std::time::Duration;
+use std::{path::Path, sync::mpsc};
+use std::path::PathBuf;
 
-use crate::{utils, Logged, LoggedSideEffect};
+use crate::{utils, Logged, LoggedSideEffect, log_error, log_error_with_timestamp};
 
-const GRADDLE_PROPERTIES_FILENAME: &str = "gradle.properties";
-
+fn is_gradle_project_file(path: &Path) -> bool {
+    if let Some(file_name) = path.file_name() {
+        if file_name == OsStr::new("build.gradle") || file_name == OsStr::new("build.gradle.kts") {
+            return true;
+        }
+    }
+    false
+}
 pub fn set_new(
-    watch_dirs: Vec<String>,
+    watch_dirs: Vec<PathBuf>,
     version: String,
     watch_duration: Duration,
 ) -> Result<(), Logged> {
     let (tx, rx) = mpsc::channel();
     let mut watcher = notify::watcher(tx, watch_duration)
-        .map_err(|err| log_error!("Unable to create watcher. {}", err))?;
+        .map_err(|err| log_error(format_args!("unable to create watcher, {}", err)))?;
     for watch_dir in watch_dirs.into_iter() {
         watcher
             .watch(watch_dir, RecursiveMode::Recursive)
-            .map_err(|err| log_error!("Unable to watch. {}", err))?
+            .map_err(|err| log_error(format_args!("unable to watch, {}", err)))?
     }
 
     loop {
         match rx.recv() {
             Ok(DebouncedEvent::Create(mut path)) => {
-                if path.file_name() == Some(OsStr::new(GRADDLE_PROPERTIES_FILENAME)) {
+                if is_gradle_project_file(&path) {
                     path.pop();
-                    log::info!("New gradle project detected at: {:?}.", path);
+                    eprintln!("[{}] new gradle project detected at `{}`", chrono::Local::now(), path.display());
 
                     path.push(utils::WRAPPER_PROPERTIES_DIR);
 
                     (|| -> Result<(), Logged> {
                         std::fs::create_dir_all(&path).map_err(|err| {
-                            log_error!("Failed to create directory `{:?}`. {}", path, err)
+                            log_error_with_timestamp(format_args!("failed to create directory `{}`, {}", path.display(), err))
                         })?;
 
                         path.push(utils::WRAPPER_PROPERTIES_FILENAME);
@@ -42,10 +49,12 @@ pub fn set_new(
                 }
             }
             Ok(DebouncedEvent::Error(err, _)) => {
-                log::error!("Error while watching directories. {}", err)
+                log_error_with_timestamp(format_args!("error while watching directories, {}", err));
             }
 
-            Err(err) => log::error!("Error while receiving watch event. {}", err),
+            Err(err) => {
+                log_error_with_timestamp(format_args!("error while receiving watch event, {}", err));
+            },
             _ => {}
         }
     }
