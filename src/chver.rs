@@ -1,4 +1,4 @@
-use crate::{utils, Logged};
+use crate::{log_error, utils, Logged};
 
 #[cfg(windows)]
 const GRADLEW: &str = "./gradlew.bat";
@@ -16,11 +16,11 @@ fn run_gradlew_wrapper(ver: &str) -> Result<(), Logged> {
     std::process::Command::new(GRADLEW)
         .args(&["wrapper", "--gradle-version", ver])
         .spawn()
-        .map_err(|err| log_error!("Failed to run `gradlew`. {}.", err))
+        .map_err(|err| log_error(format_args!("failed to run `gradlew`, {}", err)))
         .and_then(|mut child| {
             child
                 .wait()
-                .map_err(|err| log_error!("Failed to run `gradlew`. {}.", err))
+                .map_err(|err| log_error(format_args!("failed to run `gradlew`, {}", err)))
                 .and_then(|status| {
                     if !status.success() {
                         Err(handle_gradlew_status(status))
@@ -33,7 +33,7 @@ fn run_gradlew_wrapper(ver: &str) -> Result<(), Logged> {
 
 fn handle_gradlew_status(status: std::process::ExitStatus) -> Logged {
     match status.code() {
-        Some(code) => log_error!("`gradlew` exited with status code: {}.", code),
-        None => log_error!("`gradlew` terminated by signal."),
+        Some(code) => log_error(format_args!("`gradlew` exited with status code: {}", code)),
+        None => log_error(format_args!("`gradlew` terminated by signal.")),
     }
 }

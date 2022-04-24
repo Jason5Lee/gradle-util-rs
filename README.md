@@ -6,7 +6,7 @@ Note that this project is still in the alpha stage. The functionalities and beha
 
 ## Install
 
-You can find the pre-built binaries at the [release page](https://github.com/jason5lee/gradle-util-rs/releases). You can build and install it via `cargo install gradle-util-rs --version 0.1.0-alpha.2`.
+You can find the pre-built binaries at the [release page](https://github.com/jason5lee/gradle-util-rs/releases). You can build and install it via `cargo install gradle-util-rs --version 0.1.0-alpha.3`.
 
 ## Usage
 
@@ -30,7 +30,7 @@ This is made as a workaround of [IDEA-177325](https://youtrack.jetbrains.com/iss
 
 Example:
 
-`gur set-new 7.3.3 --watch-dir path1 --watch-dir path2` : watch the gradle project creation under `path1` and `path2` recursively, and create the gradle wrapper properties for the new projects using gradle version `7.3.3`.
+`gur set-new 7.3.3 path1 path2` : watch the gradle project creation under `path1` and `path2` recursively, and create the gradle wrapper properties for the new projects using gradle version `7.3.3`.
 
 ### `chver`
 
@@ -48,6 +48,7 @@ You might be surprised that a Gradle utility is written in Rust instead of Java 
 The major reason is that Gradle already requires a java instance to run. I don't want yet another java process.
 Instead, just keep it as light as possible.
 
-The reason I choose Rust instead of C/C++ or any others is that its mental model is surprisingly closed to Kotlin, the
+The reason I choose Rust is that its mental model is surprisingly closed to Kotlin, the
 major language I used with Gradle. Many building blocks in Kotlin like data class, sealed class and nullable type have their
 corresponding in Rust like struct, enum and option.
+
