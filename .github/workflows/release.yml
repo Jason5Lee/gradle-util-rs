@@ -57,7 +57,7 @@ jobs:
 
       - name: Build | Dependencies
         if: steps.cargo-cache.outputs.cache-hit != 'true' 
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --bin gur --release --target ${{ matrix.target }}
 
       - name: Build | Dev Dependencies
         if: steps.cargo-cache.outputs.cache-hit != 'true' && matrix.target != 'armv7-unknown-linux-gnueabihf'
@@ -125,7 +125,7 @@ jobs:
         run: cargo test --release --target ${{ matrix.target }} -- --nocapture
 
       - name: Build | Build
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --bin gur --release --target ${{ matrix.target }}
 
       - name: Post Setup | Prepare artifacts [Windows]
         if: matrix.os == 'windows-latest'

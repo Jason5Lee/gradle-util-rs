@@ -1,75 +1,95 @@
-use crate::templates::{ArgInfo, index_map_with_capacity, IndexMapString, Template, TemplateFile};
+use crate::templates::{index_map_with_capacity, ArgInfo, IndexMapString, Template, TemplateFile};
 
 pub(super) fn create_template() -> Template {
     Template {
-        args: {
-            let mut args: IndexMapString<ArgInfo> = index_map_with_capacity(6);
-            args.insert("gradle".into(), ArgInfo::with_description("Gradle wrapper version"));
-            args.insert("group".into(), ArgInfo::with_description("Project group"));
-            args.insert("name".into(), ArgInfo::with_description("Project name"));
-            args.insert("version".into(), ArgInfo::with_description("Project version"));
-            args.insert("jvm".into(), ArgInfo {
-                description: "Target JVM version, default to 17",
-                default: Some("17")
-            });
-            args.insert("junitJupiter".into(), ArgInfo {
-                description: "junitJupiter version, default to 5.8.1",
-                default: Some("5.8.1")
-            });
-            args
+        extra_args_info: {
+            let mut info: IndexMapString<ArgInfo> = index_map_with_capacity(1);
+            info.insert(
+                "junitJupiter".into(),
+                ArgInfo {
+                    description: "junitJupiter version, default to 5.8.1",
+                    default: Some("5.8.1".into()),
+                },
+            );
+            info
         },
-        files: || vec![
-            TemplateFile {
-                path: "gradle/wrapper/gradle-wrapper.properties",
-                write_content: |args, w| write!(w, r"distributionBase=GRADLE_USER_HOME
+        files: || {
+            vec![
+                TemplateFile {
+                    path: |_| "gradle/wrapper/gradle-wrapper.properties".into(),
+                    write_content: |args, w| {
+                        let gradle = &args.gradle;
+                        write!(
+                            w,
+                            r"distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-{}-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-{gradle}-bin.zip
 zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists", args["gradle"]),
-            },
-            TemplateFile {
-                path: "buildSrc/build.gradle.kts",
-                write_content: |_, w| write!(w, r"plugins {{
+zipStorePath=wrapper/dists"
+                        )
+                    },
+                },
+                TemplateFile {
+                    path: |_| "buildSrc/build.gradle.kts".into(),
+                    write_content: |_, w| {
+                        write!(
+                            w,
+                            r"plugins {{
     `kotlin-dsl`
 }}
 
 repositories {{
     mavenCentral()
 }}
-"),
-            },
-            TemplateFile {
-                path: "buildSrc/settings.gradle.kts",
-                write_content: |_, w| write!(w, r#"rootProject.name = "buildSrc"
-"#),
-            },
-            TemplateFile {
-                path: "buildSrc/src/main/kotlin/Versions.kt",
-                write_content: |_, w| write!(w, r#"object Versions {{
-    const val junitJupiter = "5.8.1"
-}}"#),
-            },
-            TemplateFile {
-                path: "build.gradle.kts",
-                write_content: |args, w| {
-                    let group = &args["group"];
-                    let version = &args["version"];
-                    let jvm = (&args["jvm"])
-                        .replace('.', "_");
-                    write!(w, r#"plugins {{
+"
+                        )
+                    },
+                },
+                TemplateFile {
+                    path: |_| "buildSrc/settings.gradle.kts".into(),
+                    write_content: |_, w| {
+                        write!(
+                            w,
+                            r#"rootProject.name = "buildSrc"
+"#
+                        )
+                    },
+                },
+                TemplateFile {
+                    path: |_| "buildSrc/src/main/kotlin/Versions.kt".into(),
+                    write_content: |args, w| {
+                        let junit_jupiter = &args.extras["junitJupiter"];
+                        write!(
+                            w,
+                            r#"object Versions {{
+    const val junitJupiter = "{junit_jupiter}"
+}}"#
+                        )
+                    },
+                },
+                TemplateFile {
+                    path: |_| "build.gradle.kts".into(),
+                    write_content: |args, w| {
+                        let group = &args.group;
+                        let version = &args.version;
+                        let java_jvm = &args.java_jvm;
+
+                        write!(
+                            w,
+                            r#"plugins {{
     id("java")
 }}
 
-group = {group}
-version = {version}
+group = "{group}"
+version = "{version}"
 
 repositories {{
     mavenCentral()
 }}
 
 java {{
-    sourceCompatibility = JavaVersion.VERSION_{jvm}
-    targetCompatibility = JavaVersion.VERSION_{jvm}
+    sourceCompatibility = JavaVersion.VERSION_{java_jvm}
+    targetCompatibility = JavaVersion.VERSION_{java_jvm}
 }}
 
 dependencies {{
@@ -79,14 +99,18 @@ dependencies {{
 
 tasks.getByName<Test>("test") {{
     useJUnitPlatform()
-}}"#)
+}}"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "settings.gradle.kts",
-                write_content: |args, w| {
-                    let name = &args["name"];
-                    write!(w, r#"rootProject.name = {name}
+                TemplateFile {
+                    path: |_| "settings.gradle.kts".into(),
+                    write_content: |args, w| {
+                        let name = &args.name;
+
+                        write!(
+                            w,
+                            r#"rootProject.name = "{name}"
 
 // https://twitter.com/Louis_CAD/status/1498270951175299080?s=20&t=uv0XxtYQzbktJTcpvnJ6Wg
 try {{
@@ -97,12 +121,20 @@ try {{
 }} catch (e:  NoSuchFileException) {{
     // ignore
 }}
-"#)
+"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "src/test/java/TestExample.java",
-                write_content: |_, w| write!(w, r"import org.junit.jupiter.api.Test;
+                TemplateFile {
+                    path: |args| {
+                        format!("src/test/java/{}/TestExample.java", args.package_path).into()
+                    },
+                    write_content: |args, w| {
+                        let package = &args.package;
+                        write!(
+                            w,
+                            r"package {package};
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -112,17 +144,28 @@ public class TestExample {{
         assertEquals(1, 1);
     }}
 }}
-"),
-            },
-            TemplateFile {
-                path: "src/main/java/Main.java",
-                write_content: |_, w| write!(w, r#"public class Main {{
+"
+                        )
+                    },
+                },
+                TemplateFile {
+                    path: |args| format!("src/main/java/{}/Main.java", args.package_path).into(),
+                    write_content: |args, w| {
+                        let package = &args.package;
+                        write!(
+                            w,
+                            r#"package {package};
+
+public class Main {{
     public static void main(String[] args) {{
         System.out.println("Hello World!");
     }}
 }}
-"#),
-            },
-        ],
+"#
+                        )
+                    },
+                },
+            ]
+        },
     }
 }

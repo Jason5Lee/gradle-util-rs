@@ -18,6 +18,9 @@ zipStorePath=wrapper/dists"#,
 
 pub fn write_wrapper_properties<P: AsRef<Path>>(path: P, version: &str) -> Result<(), Logged> {
     std::fs::write(path, wrapper_properties_content(version)).map_err(|err| {
-        log_error_with_timestamp(format_args!("error while writing to gradle wrapper properties file, {}", err))
+        log_error_with_timestamp(format_args!(
+            "error while writing to gradle wrapper properties file, {}",
+            err
+        ))
     })
 }

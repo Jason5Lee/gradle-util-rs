@@ -1,44 +1,98 @@
-use std::borrow::Cow;
-use crate::templates::{ArgInfo, index_map_with_capacity, IndexMapString, Template, TemplateFile};
+use crate::templates::{index_map_with_capacity, ArgInfo, IndexMapString, Template, TemplateFile};
 
 pub(super) fn create_template() -> Template {
     Template {
-        args: {
-            let mut args: IndexMapString<ArgInfo> = index_map_with_capacity(5);
-            args.insert("group".into(), ArgInfo::with_description("Project group"));
-            args.insert("name".into(), ArgInfo::with_description("Project name"));
-            args.insert("package".into(), ArgInfo {
-                description: "Package name, default to <group>.<name>".into(),
-                default: Some("".into()),
-            });
-            args.insert("jvm".into(), ArgInfo {
-                description: "Target JVM version, default to 17",
-                default: Some("17")
-            });
-            args
+        extra_args_info: {
+            let mut info: IndexMapString<ArgInfo> = index_map_with_capacity(8);
+            info.insert(
+                "kotlin".into(),
+                ArgInfo {
+                    description: "Kotlin version, default to 1.6.20",
+                    default: Some("1.6.20"),
+                },
+            );
+            info.insert(
+                "protobufPlugin".into(),
+                ArgInfo {
+                    description: "Protobuf Plugin (com.google.protobuf) version, default to 0.8.18",
+                    default: Some("0.8.18"),
+                },
+            );
+            info.insert(
+                "shadow".into(),
+                ArgInfo {
+                    description:
+                        "Shadow Plugin (com.github.johnrengelman.shadow) version, default to 7.0.0",
+                    default: Some("7.0.0"),
+                },
+            );
+            info.insert(
+                "vertx".into(),
+                ArgInfo {
+                    description: "Vert.x version, default to 4.2.7",
+                    default: Some("4.2.7"),
+                },
+            );
+            info.insert(
+                "junitJupiter".into(),
+                ArgInfo {
+                    description: "junitJupiter version, default to 5.7.0",
+                    default: Some("5.7.0"),
+                },
+            );
+            info.insert(
+                "grpc".into(),
+                ArgInfo {
+                    description: "gRPC version, default to 1.44.0",
+                    default: Some("1.44.0"),
+                },
+            );
+            info.insert(
+                "grpc-kotlin".into(),
+                ArgInfo {
+                    description: "gRPC Kotlin (io.grpc:grpc-kotlin-stub) version, default to 1.2.1",
+                    default: Some("1.2.1"),
+                },
+            );
+            info.insert(
+                "protobuf".into(),
+                ArgInfo {
+                    description: "Protobuf version, default to 3.19.2",
+                    default: Some("3.19.2"),
+                },
+            );
+            info
         },
-        files: || vec![
-            TemplateFile {
-                path: "protos/build.gradle.kts",
-                write_content: |_, w| {
-                    write!(w, r#"plugins {{
+        files: || {
+            vec![
+                TemplateFile {
+                    path: |_| "protos/build.gradle.kts".into(),
+                    write_content: |_, w| {
+                        write!(
+                            w,
+                            r#"plugins {{
     `java-library`
 }}
 
 java {{
     sourceSets.getByName("main").resources.srcDir("src/main/proto")
 }}
-"#)
+"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "protos/src/main/proto/greeting.proto",
-                write_content: |args, w| {
-                    let pkg = get_package(args);
-                    write!(w, r#"syntax = "proto3";
+                TemplateFile {
+                    path: |args| {
+                        format!("protos/src/main/proto/{}/greeting.proto", args.package_path).into()
+                    },
+                    write_content: |args, w| {
+                        let package = &args.package;
+                        write!(
+                            w,
+                            r#"syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "{pkg}";
+option java_package = "{package}";
 option java_outer_classname = "GreetingProto";
 
 package greeting;
@@ -54,16 +108,20 @@ message GreetRequest {{
 message GreetResponse {{
   string message = 1;
 }}
-"#)
+"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "server/build.gradle.kts",
-                write_content: |args, w| {
-                    let jvm = &args["jvm"];
-                    let jvm_java = jvm.replace('.', "_");
-                    let pkg = get_package(args);
-                    write!(w, r#"import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+                TemplateFile {
+                    path: |_| "server/build.gradle.kts".into(),
+                    write_content: |args, w| {
+                        let package = &args.package;
+                        let jvm = &args.jvm;
+                        let java_jvm = &args.java_jvm;
+
+                        write!(
+                            w,
+                            r#"import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.tasks.testing.logging.TestLogEvent.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -77,7 +135,7 @@ repositories {{
     mavenCentral()
 }}
 
-val mainVerticleName = "{pkg}.MainVerticle"
+val mainVerticleName = "{package}.MainVerticle"
 val launcherClassName = "io.vertx.core.Launcher"
 
 val watchForChange = "src/**/*"
@@ -100,8 +158,8 @@ val compileKotlin: KotlinCompile by tasks
 compileKotlin.kotlinOptions.jvmTarget = "{jvm}"
 
 java {{
-    sourceCompatibility = JavaVersion.VERSION_{jvm_java}
-    targetCompatibility = JavaVersion.VERSION_{jvm_java}
+    sourceCompatibility = JavaVersion.VERSION_{java_jvm}
+    targetCompatibility = JavaVersion.VERSION_{java_jvm}
 }}
 
 tasks.withType<ShadowJar> {{
@@ -128,15 +186,25 @@ tasks.withType<JavaExec> {{
         "--on-redeploy=$doOnChange"
     )
 }}
-"#)
+"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "server/src/test/kotlin/the/pkg/TestMainVerticle.kt",
-                write_content: |_, w| {
-                    write!(w, r"package the.pkg
+                TemplateFile {
+                    path: |args| {
+                        format!(
+                            "server/src/test/kotlin/{}/TestMainVerticle.kt",
+                            args.package_path
+                        )
+                        .into()
+                    },
+                    write_content: |args, w| {
+                        let package = &args.package;
+                        write!(
+                            w,
+                            r"package {package}
 
-import the.pkg.MainVerticle
+import {package}.MainVerticle
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
@@ -147,36 +215,56 @@ import org.junit.jupiter.api.extension.ExtendWith
 @ExtendWith(VertxExtension::class)
 class TestMainVerticle {{
 
-  @BeforeEach
-  fun deployVerticle(vertx: Vertx, testContext: VertxTestContext) {{
-    vertx.deployVerticle(MainVerticle(), testContext.succeeding<String> {{ _ -> testContext.completeNow() }})
-  }}
+    @BeforeEach
+    fun deployVerticle(vertx: Vertx, testContext: VertxTestContext) {{
+        vertx.deployVerticle(MainVerticle(), testContext.succeeding<String> {{ _ -> testContext.completeNow() }})
+    }}
 
-  @Test
-  fun verticleDeployed(vertx: Vertx, testContext: VertxTestContext) {{
-    testContext.completeNow()
-  }}
+    @Test
+    fun verticleDeployed(vertx: Vertx, testContext: VertxTestContext) {{
+        testContext.completeNow()
+    }}
 }}
-")
+"
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "server/src/main/kotlin/the/pkg/GreetingServiceImpl.kt",
-                write_content: |_, w| {
-                    write!(w, r#"package the.pkg
+                TemplateFile {
+                    path: |args| {
+                        format!(
+                            "server/src/main/kotlin/{}/GreetingServiceImpl.kt",
+                            args.package_path
+                        )
+                        .into()
+                    },
+                    write_content: |args, w| {
+                        let package = &args.package;
+                        write!(
+                            w,
+                            r#"package {package}
 
 class GreetingServiceImpl : GreetingServiceGrpcKt.GreetingServiceCoroutineImplBase() {{
     override suspend fun greet(request: GreetRequest): GreetResponse =
         GreetResponse.newBuilder()
             .setMessage("Hello, ${{request.name}}")
             .build()
-}}"#)
+}}"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "server/src/main/kotlin/the/pkg/MainVerticle.kt",
-                write_content: |_, w| {
-                    write!(w, r#"package the.pkg
+                TemplateFile {
+                    path: |args| {
+                        format!(
+                            "server/src/main/kotlin/{}/MainVerticle.kt",
+                            args.package_path
+                        )
+                        .into()
+                    },
+                    write_content: |args, w| {
+                        let package = &args.package;
+                        write!(
+                            w,
+                            r#"package {package}
 
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Promise
@@ -192,69 +280,84 @@ class MainVerticle : AbstractVerticle() {{
         rpcServer.start(startPromise)
     }}
 }}
-"#)
+"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "gradle/wrapper/gradle-wrapper.properties",
-                write_content: |_, w| {
-                    write!(w, r"distributionBase=GRADLE_USER_HOME
+                TemplateFile {
+                    path: |_| "gradle/wrapper/gradle-wrapper.properties".into(),
+                    write_content: |args, w| {
+                        let gradle = &args.gradle;
+                        write!(
+                            w,
+                            r"distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-7.3.3-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-{gradle}-bin.zip
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
-")
+"
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "buildSrc/build.gradle.kts",
-                write_content: |_, w| {
-                    write!(w, r"plugins {{
+                TemplateFile {
+                    path: |_| "buildSrc/build.gradle.kts".into(),
+                    write_content: |_, w| {
+                        write!(
+                            w,
+                            r"plugins {{
     `kotlin-dsl`
 }}
 
 repositories {{
     mavenCentral()
 }}
-")
+"
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "buildSrc/settings.gradle.kts",
-                write_content: |_, w| {
-                    write!(w, r#"rootProject.name = "buildSrc"
-"#)
+                TemplateFile {
+                    path: |_| "buildSrc/settings.gradle.kts".into(),
+                    write_content: |_, w| {
+                        write!(
+                            w,
+                            r#"rootProject.name = "buildSrc"
+"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "buildSrc/gradle.properties",
-                write_content: |_, w| {
-                    write!(w, r"kotlin.code.style=official")
+                TemplateFile {
+                    path: |_| "buildSrc/src/main/kotlin/Versions.kt".into(),
+                    write_content: |args, w| {
+                        let kotlin = &args.extras["kotlin"];
+                        let protobuf_plugin = &args.extras["protobufPlugin"];
+                        let shadow = &args.extras["shadow"];
+                        let vertx = &args.extras["vertx"];
+                        let junit_jupiter = &args.extras["junitJupiter"];
+                        let grpc = &args.extras["grpc"];
+                        let grpc_kotlin = &args.extras["grpc-kotlin"];
+                        let protobuf = &args.extras["protobuf"];
+
+                        write!(
+                            w,
+                            r#"object Versions {{
+    const val kotlin = "{kotlin}"
+    const val protobufPlugin = "{protobuf_plugin}"
+    const val shadow = "{shadow}"
+    const val vertx = "{vertx}"
+    const val junitJupiter = "{junit_jupiter}"
+    const val grpc = "{grpc}"
+    const val grpcKotlin = "{grpc_kotlin}"
+    const val protobuf = "{protobuf}"
+}}"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "buildSrc/src/main/kotlin/Versions.kt",
-                write_content: |_, w| {
-                    write!(w, r#"object Versions {{
-    const val kotlin = "1.6.20"
-    // Here it uses a different version of stdlib to match the Vert.x version.
-    const val kotlinStdlib = "1.5.31"
-    const val versionsPlugin = "0.42.0"
-    const val protobufPlugin = "0.8.18"
-    const val shadow = "7.0.0"
-    const val vertx = "4.2.7"
-    const val junitJupiter = "5.7.0"
-    const val kotlinxCoroutines = "1.5.2"
-    const val grpc = "1.44.0"
-    const val grpcKotlin = "1.2.1"
-    const val protobuf = "3.19.2"
-}}"#)
-                },
-            },
-            TemplateFile {
-                path: "build.gradle.kts",
-                write_content: |_, w| {
-                    write!(w, r#"plugins {{
+                TemplateFile {
+                    path: |_| "build.gradle.kts".into(),
+                    write_content: |_, w| {
+                        write!(
+                            w,
+                            r#"plugins {{
     id("com.google.protobuf") version Versions.protobufPlugin apply false
     kotlin("jvm") version Versions.kotlin apply false
     id("com.github.johnrengelman.shadow") version Versions.shadow apply false
@@ -267,13 +370,19 @@ allprojects {{
         google()
     }}
 }}
-"#)
+"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "stub/build.gradle.kts",
-                write_content: |_, w| {
-                    write!(w, r#"import com.google.protobuf.gradle.generateProtoTasks
+                TemplateFile {
+                    path: |_| "stub/build.gradle.kts".into(),
+                    write_content: |args, w| {
+                        let jvm = &args.jvm;
+                        let java_jvm = &args.java_jvm;
+
+                        write!(
+                            w,
+                            r#"import com.google.protobuf.gradle.generateProtoTasks
 import com.google.protobuf.gradle.id
 import com.google.protobuf.gradle.plugins
 import com.google.protobuf.gradle.protobuf
@@ -286,8 +395,6 @@ plugins {{
 
 dependencies {{
     protobuf(project(":protos"))
-
-//    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:${{Versions.kotlinxCoroutines}}")
 
     api("io.grpc:grpc-stub:${{Versions.grpc}}")
     api("io.grpc:grpc-protobuf:${{Versions.grpc}}")
@@ -305,16 +412,15 @@ sourceSets {{
     main.java.srcDirs("build/generated/source/proto/main/grpckt")
 }}
 
-// TODO: set JVM target version
 java {{
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_{java_jvm}
+    targetCompatibility = JavaVersion.VERSION_{java_jvm}
 }}
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().all {{
     kotlinOptions {{
         freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
-        jvmTarget = "11"
+        jvmTarget = "{jvm}"
     }}
 }}
 
@@ -341,13 +447,17 @@ protobuf {{
             }}
         }}
     }}
-}}"#)
+}}"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "settings.gradle.kts",
-                write_content: |_, w| {
-                    write!(w, r#"rootProject.name = "transcode-limit"
+                TemplateFile {
+                    path: |_| "settings.gradle.kts".into(),
+                    write_content: |args, w| {
+                        let name = &args.name;
+                        write!(
+                            w,
+                            r#"rootProject.name = "{name}"
 
 pluginManagement {{
     repositories {{
@@ -367,19 +477,24 @@ try {{
 }} catch (e:  NoSuchFileException) {{
     // ignore
 }}
-"#)
+"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "gradle.properties",
-                write_content: |_, w| {
-                    write!(w, r"kotlin.code.style=official")
+                TemplateFile {
+                    path: |_| "gradle.properties".into(),
+                    write_content: |_, w| write!(w, r"kotlin.code.style=official"),
                 },
-            },
-            TemplateFile {
-                path: "client/build.gradle.kts",
-                write_content: |_, w| {
-                    write!(w, r#"import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+                TemplateFile {
+                    path: |_| "client/build.gradle.kts".into(),
+                    write_content: |args, w| {
+                        let package = &args.package;
+                        let jvm = &args.jvm;
+                        let java_jvm = &args.java_jvm;
+
+                        write!(
+                            w,
+                            r#"import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.tasks.testing.logging.TestLogEvent.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -393,7 +508,7 @@ repositories {{
     mavenCentral()
 }}
 
-val mainVerticleName = "the.pkg.MainVerticle" // TODO: point to your vericle path
+val mainVerticleName = "{package}.MainVerticle" // TODO: point to your vericle path
 val launcherClassName = "io.vertx.core.Launcher"
 
 val watchForChange = "src/**/*"
@@ -412,13 +527,12 @@ dependencies {{
     testImplementation("org.junit.jupiter:junit-jupiter:${{Versions.junitJupiter}}")
 }}
 
-// TODO: set target kotlin version
 val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions.jvmTarget = "11"
+compileKotlin.kotlinOptions.jvmTarget = "{jvm}"
 
 java {{
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_{java_jvm}
+    targetCompatibility = JavaVersion.VERSION_{java_jvm}
 }}
 
 tasks.withType<ShadowJar> {{
@@ -445,13 +559,24 @@ tasks.withType<JavaExec> {{
         "--on-redeploy=$doOnChange"
     )
 }}
-"#)
+"#
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "client/src/test/kotlin/the/pkg/TestMainVerticle.kt",
-                write_content: |_, w| {
-                    write!(w, r"package the.pkg
+                TemplateFile {
+                    path: |args| {
+                        format!(
+                            "client/src/test/kotlin/{}/TestMainVerticle.kt",
+                            args.package_path
+                        )
+                        .into()
+                    },
+                    write_content: |args, w| {
+                        let package = &args.package;
+
+                        write!(
+                            w,
+                            r"package {package}
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
@@ -459,7 +584,7 @@ import io.vertx.junit5.VertxTestContext
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import the.pkg.MainVerticle
+import {package}.MainVerticle
 
 @ExtendWith(VertxExtension::class)
 class TestMainVerticle {{
@@ -474,13 +599,24 @@ class TestMainVerticle {{
         testContext.completeNow()
     }}
 }}
-")
+"
+                        )
+                    },
                 },
-            },
-            TemplateFile {
-                path: "client/src/main/kotlin/the/pkg/MainVerticle.kt",
-                write_content: |_, w| {
-                    write!(w, r#"package the.pkg
+                TemplateFile {
+                    path: |args| {
+                        format!(
+                            "client/src/main/kotlin/{}/MainVerticle.kt",
+                            args.package_path
+                        )
+                        .into()
+                    },
+                    write_content: |args, w| {
+                        let package = &args.package;
+
+                        write!(
+                            w,
+                            r#"package {package}
 
 import io.vertx.grpc.VertxChannelBuilder
 import io.vertx.kotlin.coroutines.CoroutineVerticle
@@ -499,18 +635,11 @@ class MainVerticle : CoroutineVerticle() {{
         println(resp.message)
     }}
 }}
-"#)
+"#
+                        )
+                    },
                 },
-            },
-        ],
-    }
-}
-
-fn get_package(args: &fxhash::FxHashMap<String, String>) -> Cow<str> {
-    let pkg = &args["package"];
-    if pkg.is_empty()  {
-        pkg.into()
-    } else {
-        format!("{}.{}", args["group"], args["name"]).into()
+            ]
+        },
     }
 }

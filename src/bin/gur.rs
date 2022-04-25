@@ -1,6 +1,6 @@
-use std::path::PathBuf;
-use clap::{Parser, Subcommand, Args};
+use clap::{Args, Parser, Subcommand};
 use gradle_util_rs::LoggedSideEffect;
+use std::path::PathBuf;
 use std::time::Duration;
 
 #[derive(Parser)]
@@ -14,9 +14,16 @@ struct Cli {
 enum Command {
     #[clap(about = "Watch for the new Gradle project and set the gradle version")]
     SetNew {
-        #[clap(required = true, help = "The gradle wrapper version to be set for the new projects.")]
+        #[clap(
+            required = true,
+            help = "The gradle wrapper version to be set for the new projects."
+        )]
         version: String,
-        #[clap(required = true, parse(from_os_str), help = "Directories to be watched recursively for the new projects. You can have multiple watched directories.")]
+        #[clap(
+            required = true,
+            parse(from_os_str),
+            help = "Directories to be watched recursively for the new projects. You can have multiple watched directories."
+        )]
         watch_dir: Vec<PathBuf>,
         #[clap(long, default_value = "1s", parse(try_from_str = humantime::parse_duration), help = "Duration of file watching delay. Default to 1 second.")]
         watch_duration: Duration,
@@ -28,12 +35,20 @@ enum Command {
         version: String,
         #[clap(
             long,
+            short,
+            parse(from_os_str),
+            default_value = ".",
+            help = "Project directory."
+        )]
+        project_dir: PathBuf,
+        #[clap(
+            long,
             help = "Enable the yolo mode. It will change the gradle-wrapper.properties file before running the wrapper task. With this flag, the gradle distribution of the old version won't be downloaded. But it may not work as expected."
         )]
         yolo: bool,
     },
-    
-    #[clap(about = "Project template")]
+
+    #[clap(about = "Create project from the template")]
     Template(Template),
 }
 #[derive(Debug, Args)]
@@ -55,7 +70,10 @@ enum TemplateCommands {
         defines: Vec<(String, String)>,
         #[clap(long, help = "Allow output directory to exist")]
         allow_exists: bool,
-        #[clap(long, help = "Overwrite existing file, only useful with --allow-exists")]
+        #[clap(
+            long,
+            help = "Overwrite existing file, only useful with --allow-exists"
+        )]
         overwrite: bool,
     },
 }
@@ -74,21 +92,33 @@ fn main() {
             watch_dir,
             watch_duration,
         } => gradle_util_rs::set_new::set_new(watch_dir, version, watch_duration),
-        Command::Chver { version, yolo } => gradle_util_rs::chver::chver(version, yolo),
-        Command::Template(Template {  command }) => match command {
+        Command::Chver {
+            version,
+            project_dir,
+            yolo,
+        } => gradle_util_rs::chver::chver(project_dir, version, yolo),
+        Command::Template(Template { command }) => match command {
             TemplateCommands::List => gradle_util_rs::templates::list(),
-            TemplateCommands::New { name, output, defines, allow_exists, overwrite } => gradle_util_rs::templates::new(name, output, defines, allow_exists, overwrite),
+            TemplateCommands::New {
+                name,
+                output,
+                defines,
+                allow_exists,
+                overwrite,
+            } => gradle_util_rs::templates::new(name, output, defines, allow_exists, overwrite),
         },
     }
     .ignore_logged_error()
 }
 
-fn parse_key_val<T, U>(s: &str) -> Result<(T, U), Box<dyn std::error::Error + Send + Sync + 'static>>
-    where
-        T: std::str::FromStr,
-        T::Err: std::error::Error + Send + Sync + 'static,
-        U: std::str::FromStr,
-        U::Err: std::error::Error + Send + Sync + 'static,
+fn parse_key_val<T, U>(
+    s: &str,
+) -> Result<(T, U), Box<dyn std::error::Error + Send + Sync + 'static>>
+where
+    T: std::str::FromStr,
+    T::Err: std::error::Error + Send + Sync + 'static,
+    U: std::str::FromStr,
+    U::Err: std::error::Error + Send + Sync + 'static,
 {
     let pos = s
         .find('=')

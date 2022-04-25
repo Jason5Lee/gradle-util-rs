@@ -19,9 +19,10 @@ OPTIONS:
     -V, --version    Print version information
 
 SUBCOMMANDS:
-    chver      Change the gradle wrapper version
-    help       Print this message or the help of the given subcommand(s)
-    set-new    Watch for the new Gradle project and set the gradle version
+    chver       Change the gradle wrapper version
+    help        Print this message or the help of the given subcommand(s)
+    set-new     Watch for the new Gradle project and set the gradle version
+    template    Create project from the template
 ```
 
 ### `set-new`
@@ -41,6 +42,19 @@ When the `yolo` flag is enabled, it will first update the content of `gradle-wra
 then run the wrapper task. In this way, the gradle distribution of the old version won't be downloaded. But it may have potential problems.
 
 Example: `gur chver 7.3.3 --yolo`
+
+### `template`
+
+This subcommand allows you to create a gradle project from a template.
+
+The generated project has the following features:
+
+* Using buildSrc as the central dependency version definition.
+* Allow you to customize the Gradle version in the wrapper properties.
+
+Example:
+* List all the templates: `gur template list`
+* Create a project from the template: `gur template create <template-name> -o <project path>`
 
 ## Why Rust?
 
