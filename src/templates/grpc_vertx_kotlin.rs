@@ -65,6 +65,7 @@ pub(super) fn create_template() -> Template {
         },
         files: || {
             vec![
+                super::git_ignore::GIT_IGNORE,
                 TemplateFile {
                     path: |_| "protos/build.gradle.kts".into(),
                     write_content: |_, w| {

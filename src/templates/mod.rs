@@ -1,6 +1,7 @@
 mod grpc_vertx_kotlin;
 mod kotlin_project;
 mod project;
+mod git_ignore;
 
 use crate::{log_error, log_warn, Logged};
 use std::borrow::Cow;
@@ -103,7 +104,7 @@ pub fn list() -> Result<(), Logged> {
         println!("Template: {}", name);
         println!("Args:");
         println!(
-            "    gradle: Gradle wrapper version
+            "    gradle: Gradle version
     group: Group name
     name: Project name
     package: Package name, default to <group>.<name>

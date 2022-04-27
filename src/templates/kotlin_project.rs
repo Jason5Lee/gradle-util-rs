@@ -15,6 +15,7 @@ pub(super) fn create_template() -> Template {
         },
         files: || {
             vec![
+                super::git_ignore::GIT_IGNORE,
                 TemplateFile {
                     path: |_| "gradle/wrapper/gradle-wrapper.properties".into(),
                     write_content: |args, w| {

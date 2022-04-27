@@ -8,21 +8,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d4f2a7d7-e3ea-4f84-be4d-487b43bab6df" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/.idea.gradle-util-rs.dir/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/.idea.gradle-util-rs.dir/.idea/encodings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/bin/gen_template.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/templates/grpc_vertx_kotlin.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/templates/kotlin_project.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/templates/mod.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/templates/project.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/release.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/release.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.gradle-util-rs.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.gradle-util-rs.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/bin/gur.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bin/gur.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/chver.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/chver.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -79,6 +65,7 @@
       <workItem from="1650723015834" duration="736000" />
       <workItem from="1650723894714" duration="16900000" />
       <workItem from="1650790187889" duration="5163000" />
+      <workItem from="1650872369949" duration="8000" />
     </task>
     <servers />
   </component>
