@@ -469,14 +469,10 @@ pluginManagement {{
 include("stub", "protos", "client", "server")
 
 // https://twitter.com/Louis_CAD/status/1498270951175299080?s=20&t=uv0XxtYQzbktJTcpvnJ6Wg
-try {{
-    rootDir.resolve("gradle.properties").copyTo(
-        target = rootDir.resolve("buildSrc/gradle.properties"),
-        overwrite = true,
-    )
-}} catch (e:  NoSuchFileException) {{
-    // ignore
-}}
+rootDir.resolve("gradle.properties").copyTo(
+    target = rootDir.resolve("buildSrc/gradle.properties"),
+    overwrite = true,
+)
 "#
                         )
                     },

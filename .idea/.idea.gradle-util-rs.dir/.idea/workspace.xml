@@ -8,7 +8,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d4f2a7d7-e3ea-4f84-be4d-487b43bab6df" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.gradle-util-rs.dir/.idea/misc.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.gradle-util-rs.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.gradle-util-rs.dir/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/templates/grpc_vertx_kotlin.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/templates/grpc_vertx_kotlin.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/templates/kotlin_project.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/templates/kotlin_project.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/templates/project.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/templates/project.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,6 +70,7 @@
       <workItem from="1650723894714" duration="16900000" />
       <workItem from="1650790187889" duration="5163000" />
       <workItem from="1650872369949" duration="8000" />
+      <workItem from="1651495691597" duration="572000" />
     </task>
     <servers />
   </component>

@@ -104,6 +104,10 @@ tasks.getByName<Test>("test") {{
                     },
                 },
                 TemplateFile {
+                    path: |_| "gradle.properties".into(),
+                    write_content: |_, _| Ok(()),
+                },
+                TemplateFile {
                     path: |_| "settings.gradle.kts".into(),
                     write_content: |args, w| {
                         let name = &args.name;
@@ -113,14 +117,10 @@ tasks.getByName<Test>("test") {{
                             r#"rootProject.name = "{name}"
 
 // https://twitter.com/Louis_CAD/status/1498270951175299080?s=20&t=uv0XxtYQzbktJTcpvnJ6Wg
-try {{
-    rootDir.resolve("gradle.properties").copyTo(
-        target = rootDir.resolve("buildSrc/gradle.properties"),
-        overwrite = true,
-    )
-}} catch (e:  NoSuchFileException) {{
-    // ignore
-}}
+rootDir.resolve("gradle.properties").copyTo(
+    target = rootDir.resolve("buildSrc/gradle.properties"),
+    overwrite = true,
+)
 "#
                         )
                     },
