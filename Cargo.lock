@@ -181,7 +181,7 @@ dependencies = [
 
 [[package]]
 name = "gradle-util-rs"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "apply",
  "chrono",
