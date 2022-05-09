@@ -18,7 +18,7 @@ fn main() -> io::Result<()> {
         }
     };
 
-    let mut template = File::create("template.rs")?.apply(|f| BufWriter::new(f));
+    let mut template = File::create("template.rs")?.apply(BufWriter::new);
     write!(template, "use crate::templates::{{ArgInfo, index_map_with_capacity, IndexMapString, Template, TemplateFile}};
 
 pub(super) fn create_template() -> Template {{
@@ -78,7 +78,7 @@ pub(super) fn create_template() -> Template {{
 ",
             pathdiff::diff_paths(file.path(), &path).unwrap().display(),
             &literal_suffix[1..],
-            content.replace("{", "{{").replace("}", "}}"),
+            content.replace('{', "{{").replace('}', "}}"),
             literal_suffix
         )?;
     }

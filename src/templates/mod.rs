@@ -1,6 +1,8 @@
 mod grpc_vertx_kotlin;
 mod kotlin_project;
 mod project;
+mod git_ignore;
+mod gitattributes;
 
 use crate::{log_error, log_warn, Logged};
 use std::borrow::Cow;
@@ -78,7 +80,7 @@ impl Args {
         if r.jvm.is_empty() {
             r.jvm = "17".to_string();
         }
-        r.java_jvm = r.jvm.replace(".", "_");
+        r.java_jvm = r.jvm.replace('.', "_");
         Ok(r)
     }
 }
@@ -103,7 +105,7 @@ pub fn list() -> Result<(), Logged> {
         println!("Template: {}", name);
         println!("Args:");
         println!(
-            "    gradle: Gradle wrapper version
+            "    gradle: Gradle version
     group: Group name
     name: Project name
     package: Package name, default to <group>.<name>
@@ -130,11 +132,10 @@ pub fn new(
         if output.is_file() {
             return Err(log_error(format_args!("output path is a file")));
         }
-    } else {
-        if output.exists() {
-            return Err(log_error(format_args!("output directory already exists")));
-        }
+    } else if output.exists() {
+        return Err(log_error(format_args!("output directory already exists")));
     }
+
     let mut args = Args::from_vec(defines)?;
     let templates = get_templates();
     let template = templates
@@ -189,4 +190,3 @@ pub fn new(
     );
     Ok(())
 }
-// TODO: add vert.x kotlin template

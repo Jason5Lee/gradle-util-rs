@@ -8,13 +8,15 @@ pub(super) fn create_template() -> Template {
                 "junitJupiter".into(),
                 ArgInfo {
                     description: "junitJupiter version, default to 5.8.1",
-                    default: Some("5.8.1".into()),
+                    default: Some("5.8.1"),
                 },
             );
             info
         },
         files: || {
             vec![
+                super::git_ignore::GIT_IGNORE,
+                super::gitattributes::GITATTRIBUTES,
                 TemplateFile {
                     path: |_| "gradle/wrapper/gradle-wrapper.properties".into(),
                     write_content: |args, w| {
