@@ -62,7 +62,7 @@ impl Args {
             }
         }
         if r.gradle.is_empty() {
-            return Err(log_error(format_args!("missing argument: gradle")));
+            r.gradle = "7.3.3".to_string();
         }
         if r.group.is_empty() {
             return Err(log_error(format_args!("missing argument: group")));
@@ -105,7 +105,7 @@ pub fn list() -> Result<(), Logged> {
         println!("Template: {}", name);
         println!("Args:");
         println!(
-            "    gradle: Gradle version
+            "    gradle: Gradle version, default to 7.3.3
     group: Group name
     name: Project name
     package: Package name, default to <group>.<name>
