@@ -28,6 +28,8 @@ pub(super) fn create_template() -> Template {{
             info
         }},
         files: || vec![
+                super::git_ignore::GIT_IGNORE,
+                super::gitattributes::GITATTRIBUTES,
 ")?;
 
     for file in WalkDir::new(&path) {
