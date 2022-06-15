@@ -112,7 +112,7 @@ tasks.getByName<Test>("test") {{
                 TemplateFile {
                     path: |_| "settings.gradle.kts".into(),
                     write_content: |args, w| {
-                        let name = &args.name;
+                        let name = &args.artifact;
 
                         write!(
                             w,

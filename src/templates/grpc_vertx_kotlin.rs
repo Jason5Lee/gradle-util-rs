@@ -456,7 +456,7 @@ protobuf {{
                 TemplateFile {
                     path: |_| "settings.gradle.kts".into(),
                     write_content: |args, w| {
-                        let name = &args.name;
+                        let name = &args.artifact;
                         write!(
                             w,
                             r#"rootProject.name = "{name}"
@@ -571,7 +571,6 @@ tasks.withType<JavaExec> {{
                     },
                     write_content: |args, w| {
                         let package = &args.package;
-
                         write!(
                             w,
                             r"package {package}

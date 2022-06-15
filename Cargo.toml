@@ -21,6 +21,7 @@ fxhash = "0.2"
 indexmap = { version = "1.8", features = [ "std" ] }
 termcolor = "1.1"
 chrono = "0.4"
+phf = { version = "0.10", features = ["macros"] }
 
 [[bin]]
 name = "gur"
