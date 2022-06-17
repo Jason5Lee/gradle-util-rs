@@ -1,0 +1,99 @@
+[[file]]
+path = "gradle/wrapper/gradle-wrapper.properties"
+content = """distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-$(gradle)-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists"""
+
+[[file]]
+path = "buildSrc/build.gradle.kts"
+content = """plugins {
+    `kotlin-dsl`
+}
+
+repositories {
+    mavenCentral()
+}
+"""
+
+[[file]]
+path = "buildSrc/settings.gradle.kts"
+content = """rootProject.name = "buildSrc"
+"""
+
+[[file]]
+path = "buildSrc/src/main/kotlin/Versions.kt"
+content = """object Versions {
+    const val kotlin = "1.6.20"
+}"""
+
+[[file]]
+path = "build.gradle.kts"
+content = """import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+plugins {
+    kotlin("jvm") version Versions.kotlin
+}
+
+group = "$(group)"
+version = "$(version)"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation(kotlin("test"))
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_$(java_jvm)
+    targetCompatibility = JavaVersion.VERSION_$(java_jvm)
+}
+tasks.withType<KotlinCompile> {
+    kotlinOptions.jvmTarget = "$(jvm)"
+}
+"""
+
+[[file]]
+path = "settings.gradle.kts"
+content = """rootProject.name = "$(artifact)"
+
+// https://twitter.com/Louis_CAD/status/1498270951175299080?s=20&t=uv0XxtYQzbktJTcpvnJ6Wg
+rootDir.resolve("gradle.properties").copyTo(
+    target = rootDir.resolve("buildSrc/gradle.properties"),
+    overwrite = true,
+)
+"""
+
+[[file]]
+path = "gradle.properties"
+content = """kotlin.code.style=official
+"""
+
+[[file]]
+path = "src/test/kotlin/$(package)/SimpleTest.kt"
+content = """package $(package)
+
+import kotlin.test.*
+
+class SimpleTest {
+    @Test
+    fun test() {
+        assertEquals(1, 1)
+    }
+}"""
+
+[[file]]
+path = "src/main/kotlin/$(package)/main.kt"
+content = """package $(package)
+
+fun main() {
+    println("Hello, world!")
+}"""
+

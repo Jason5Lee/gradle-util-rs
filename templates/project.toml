@@ -1,0 +1,98 @@
+[[file]]
+path = "gradle/wrapper/gradle-wrapper.properties"
+content = """distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-$(gradle)-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists"""
+
+[[file]]
+path = "buildSrc/build.gradle.kts"
+content = """plugins {
+    `kotlin-dsl`
+}
+
+repositories {
+    mavenCentral()
+}
+"""
+
+[[file]]
+path = "buildSrc/settings.gradle.kts"
+content = """rootProject.name = "buildSrc"
+"""
+
+[[file]]
+path = "buildSrc/src/main/kotlin/Versions.kt"
+content = """object Versions {
+    const val junitJupiter = "5.8.1"
+}"""
+
+[[file]]
+path = "build.gradle.kts"
+content = """plugins {
+    id("java")
+}
+
+group = "$(group)"
+version = "$(version)"
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_$(java_jvm)
+    targetCompatibility = JavaVersion.VERSION_$(java_jvm)
+}
+
+dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter-api:${Versions.junitJupiter}")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${Versions.junitJupiter}")
+}
+
+tasks.getByName<Test>("test") {
+    useJUnitPlatform()
+}"""
+
+[[file]]
+path = "gradle.properties"
+content = """"""
+
+[[file]]
+path = "settings.gradle.kts"
+content = """rootProject.name = "$(artifact)"
+
+// https://twitter.com/Louis_CAD/status/1498270951175299080?s=20&t=uv0XxtYQzbktJTcpvnJ6Wg
+rootDir.resolve("gradle.properties").copyTo(
+    target = rootDir.resolve("buildSrc/gradle.properties"),
+    overwrite = true,
+)
+"""
+
+[[file]]
+path = "src/test/java/$(package)/TestExample.java"
+content = """package $(package);
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class TestExample {
+    @Test
+    public void test() {
+        assertEquals(1, 1);
+    }
+}
+"""
+
+[[file]]
+path = "src/main/java/$(package)/Main.java"
+content = """package $(package);
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello World!");
+    }
+}
+"""
+

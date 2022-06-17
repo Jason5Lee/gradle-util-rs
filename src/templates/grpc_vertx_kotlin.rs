@@ -65,8 +65,8 @@ pub(super) fn create_template() -> Template {
         },
         files: || {
             vec![
-                super::git_ignore::GIT_IGNORE,
-                super::gitattributes::GITATTRIBUTES,
+                // super::git_ignore::GIT_IGNORE,
+                // super::gitattributes::GITATTRIBUTES,
                 TemplateFile {
                     path: |_| "protos/build.gradle.kts".into(),
                     write_content: |_, w| {
@@ -192,7 +192,8 @@ tasks.withType<JavaExec> {{
                         )
                     },
                 },
-                TemplateFile {
+                TemplateFile 
+                {
                     path: |args| {
                         format!(
                             "server/src/test/kotlin/{}/TestMainVerticle.kt",

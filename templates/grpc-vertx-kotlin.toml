@@ -1,0 +1,428 @@
+[[file]]
+path = "protos/build.gradle.kts"
+content = """plugins {
+    `java-library`
+}
+
+java {
+    sourceSets.getByName("main").resources.srcDir("src/main/proto")
+}
+"""
+
+[[file]]
+path = "protos/src/main/proto/$(package)/greeting.proto"
+content = """syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "$(package)";
+option java_outer_classname = "GreetingProto";
+
+package greeting;
+
+service GreetingService {
+    rpc Greet(GreetRequest) returns (GreetResponse) {}
+}
+
+message GreetRequest {
+    string name = 1;
+}
+
+message GreetResponse {
+  string message = 1;
+}
+"""
+
+[[file]]
+path = "server/build.gradle.kts"
+content = """import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.api.tasks.testing.logging.TestLogEvent.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+plugins {
+    kotlin("jvm")
+    application
+    id("com.github.johnrengelman.shadow")
+}
+
+repositories {
+    mavenCentral()
+}
+
+val mainVerticleName = "$(package).MainVerticle"
+val launcherClassName = "io.vertx.core.Launcher"
+
+val watchForChange = "src/**/*"
+val doOnChange = "${projectDir}/gradlew classes"
+
+application {
+    mainClass.set(launcherClassName)
+}
+
+dependencies {
+    implementation(project(":stub"))
+    implementation(platform("io.vertx:vertx-stack-depchain:${Versions.vertx}"))
+    implementation("io.vertx:vertx-grpc")
+    implementation("io.vertx:vertx-lang-kotlin-coroutines")
+    testImplementation("io.vertx:vertx-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter:${Versions.junitJupiter}")
+}
+
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions.jvmTarget = "$(jvm)"
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_$(java_jvm)
+    targetCompatibility = JavaVersion.VERSION_$(java_jvm)
+}
+
+tasks.withType<ShadowJar> {
+    archiveClassifier.set("fat")
+    manifest {
+        attributes(mapOf("Main-Verticle" to mainVerticleName))
+    }
+    mergeServiceFiles()
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+    testLogging {
+        events = setOf(PASSED, SKIPPED, FAILED)
+    }
+}
+
+tasks.withType<JavaExec> {
+    args = listOf(
+        "run",
+        mainVerticleName,
+        "--redeploy=$watchForChange",
+        "--launcher-class=$launcherClassName",
+        "--on-redeploy=$doOnChange"
+    )
+}
+"""
+
+[[file]]
+path = "server/src/test/kotlin/$(package)/TestMainVerticle.kt"
+content = """package $(package)
+
+import $(package).MainVerticle
+import io.vertx.core.Vertx
+import io.vertx.junit5.VertxExtension
+import io.vertx.junit5.VertxTestContext
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+
+@ExtendWith(VertxExtension::class)
+class TestMainVerticle {
+
+    @BeforeEach
+    fun deployVerticle(vertx: Vertx, testContext: VertxTestContext) {
+        vertx.deployVerticle(MainVerticle(), testContext.succeeding<String> { _ -> testContext.completeNow() })
+    }
+
+    @Test
+    fun verticleDeployed(vertx: Vertx, testContext: VertxTestContext) {
+        testContext.completeNow()
+    }
+}
+"""
+
+[[file]]
+path = "server/src/main/kotlin/$(package)/GreetingServiceImpl.kt"
+content = """package $(package)
+
+class GreetingServiceImpl : GreetingServiceGrpcKt.GreetingServiceCoroutineImplBase() {
+    override suspend fun greet(request: GreetRequest): GreetResponse =
+        GreetResponse.newBuilder()
+            .setMessage("Hello, ${request.name}")
+            .build()
+}"""
+
+[[file]]
+path = "server/src/main/kotlin/$(package)/MainVerticle.kt"
+content = """package $(package)
+
+import io.vertx.core.AbstractVerticle
+import io.vertx.core.Promise
+import io.vertx.grpc.VertxServerBuilder
+
+class MainVerticle : AbstractVerticle() {
+
+    override fun start(startPromise: Promise<Void>) {
+        val rpcServer = VertxServerBuilder
+            .forAddress(vertx, "localhost", 8080)
+            .addService(GreetingServiceImpl())
+            .build()
+        rpcServer.start(startPromise)
+    }
+}
+"""
+
+[[file]]
+path = "gradle/wrapper/gradle-wrapper.properties"
+content = """distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-$(gradle)-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+"""
+
+[[file]]
+path = "buildSrc/build.gradle.kts"
+content = """plugins {
+    `kotlin-dsl`
+}
+
+repositories {
+    mavenCentral()
+}
+"""
+
+[[file]]
+path = "buildSrc/settings.gradle.kts"
+content = """rootProject.name = "buildSrc"
+"""
+
+[[file]]
+path = "buildSrc/src/main/kotlin/Versions.kt"
+content = """object Versions {
+    const val kotlin = "1.6.20"
+    const val protobufPlugin = "0.8.18"
+    const val shadow = "7.0.0"
+    const val vertx = "4.2.7"
+    const val junitJupiter = "5.7.0"
+    const val grpc = "1.44.0"
+    const val grpcKotlin = "1.2.1"
+    const val protobuf = "3.19.2"
+}"""
+
+[[file]]
+path = "build.gradle.kts"
+content = """plugins {
+    id("com.google.protobuf") version Versions.protobufPlugin apply false
+    kotlin("jvm") version Versions.kotlin apply false
+    id("com.github.johnrengelman.shadow") version Versions.shadow apply false
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        google()
+    }
+}
+"""
+
+[[file]]
+path = "stub/build.gradle.kts"
+content = """import com.google.protobuf.gradle.generateProtoTasks
+import com.google.protobuf.gradle.id
+import com.google.protobuf.gradle.plugins
+import com.google.protobuf.gradle.protobuf
+import com.google.protobuf.gradle.protoc
+
+plugins {
+    kotlin("jvm")
+    id("com.google.protobuf")
+}
+
+dependencies {
+    protobuf(project(":protos"))
+
+    api("io.grpc:grpc-stub:${Versions.grpc}")
+    api("io.grpc:grpc-protobuf:${Versions.grpc}")
+    api("io.grpc:grpc-kotlin-stub:${Versions.grpcKotlin}")
+    api("com.google.protobuf:protobuf-kotlin:${Versions.protobuf}")
+    api("com.google.protobuf:protobuf-java-util:${Versions.protobuf}")
+}
+
+// Makes IntelliJ IDEA happy.
+sourceSets {
+    val main by getting { }
+    main.java.srcDirs("build/generated/source/proto/main/java")
+    main.java.srcDirs("build/generated/source/proto/main/grpc")
+    main.java.srcDirs("build/generated/source/proto/main/kotlin")
+    main.java.srcDirs("build/generated/source/proto/main/grpckt")
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_$(java_jvm)
+    targetCompatibility = JavaVersion.VERSION_$(java_jvm)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().all {
+    kotlinOptions {
+        freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
+        jvmTarget = "$(jvm)"
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${Versions.protobuf}"
+    }
+    plugins {
+        id("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:${Versions.grpc}"
+        }
+        id("grpckt") {
+            artifact = "io.grpc:protoc-gen-grpc-kotlin:${Versions.grpcKotlin}:jdk7@jar"
+        }
+    }
+    generateProtoTasks {
+        all().forEach {
+            it.builtins {
+                id("kotlin")
+            }
+            it.plugins {
+                id("grpc")
+                id("grpckt")
+            }
+        }
+    }
+}"""
+
+[[file]]
+path = "settings.gradle.kts"
+content = """rootProject.name = "$(artifact)"
+
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+    }
+}
+
+include("stub", "protos", "client", "server")
+
+// https://twitter.com/Louis_CAD/status/1498270951175299080?s=20&t=uv0XxtYQzbktJTcpvnJ6Wg
+rootDir.resolve("gradle.properties").copyTo(
+    target = rootDir.resolve("buildSrc/gradle.properties"),
+    overwrite = true,
+)
+"""
+
+[[file]]
+path = "gradle.properties"
+content = """kotlin.code.style=official"""
+
+[[file]]
+path = "client/build.gradle.kts"
+content = """import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.api.tasks.testing.logging.TestLogEvent.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+plugins {
+    kotlin("jvm")
+    application
+    id("com.github.johnrengelman.shadow")
+}
+
+repositories {
+    mavenCentral()
+}
+
+val mainVerticleName = "$(package).MainVerticle" // TODO: point to your vericle path
+val launcherClassName = "io.vertx.core.Launcher"
+
+val watchForChange = "src/**/*"
+val doOnChange = "$projectDir/gradlew classes"
+
+application {
+    mainClass.set(launcherClassName)
+}
+
+dependencies {
+    implementation(platform("io.vertx:vertx-stack-depchain:${Versions.vertx}"))
+    implementation("io.vertx:vertx-grpc")
+    implementation("io.vertx:vertx-lang-kotlin-coroutines")
+    implementation(project(":stub"))
+    testImplementation("io.vertx:vertx-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter:${Versions.junitJupiter}")
+}
+
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions.jvmTarget = "$(jvm)"
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_$(java_jvm)
+    targetCompatibility = JavaVersion.VERSION_$(java_jvm)
+}
+
+tasks.withType<ShadowJar> {
+    archiveClassifier.set("fat")
+    manifest {
+        attributes(mapOf("Main-Verticle" to mainVerticleName))
+    }
+    mergeServiceFiles()
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+    testLogging {
+        events = setOf(PASSED, SKIPPED, FAILED)
+    }
+}
+
+tasks.withType<JavaExec> {
+    args = listOf(
+        "run",
+        mainVerticleName,
+        "--redeploy=$watchForChange",
+        "--launcher-class=$launcherClassName",
+        "--on-redeploy=$doOnChange"
+    )
+}
+"""
+
+[[file]]
+path = "client/src/test/kotlin/$(package)/TestMainVerticle.kt"
+content = """package $(package)
+
+import io.vertx.core.Vertx
+import io.vertx.junit5.VertxExtension
+import io.vertx.junit5.VertxTestContext
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import $(package).MainVerticle
+
+@ExtendWith(VertxExtension::class)
+class TestMainVerticle {
+
+    @BeforeEach
+    fun deployVerticle(vertx: Vertx, testContext: VertxTestContext) {
+        vertx.deployVerticle(MainVerticle(), testContext.succeeding<String> { _ -> testContext.completeNow() })
+    }
+
+    @Test
+    fun verticleDeployed(vertx: Vertx, testContext: VertxTestContext) {
+        testContext.completeNow()
+    }
+}
+"""
+
+[[file]]
+path = "client/src/main/kotlin/$(package)/MainVerticle.kt"
+content = """package $(package)
+
+import io.vertx.grpc.VertxChannelBuilder
+import io.vertx.kotlin.coroutines.CoroutineVerticle
+
+class MainVerticle : CoroutineVerticle() {
+    override suspend fun start() {
+        val channel = VertxChannelBuilder
+            .forAddress(vertx, "localhost", 8080)
+            .usePlaintext()
+            .build()
+
+        val stub = GreetingServiceGrpcKt.GreetingServiceCoroutineStub(channel)
+        val name = "World"
+
+        val resp = stub.greet(GreetRequest.newBuilder().setName(name).build())
+        println(resp.message)
+    }
+}
+"""
+

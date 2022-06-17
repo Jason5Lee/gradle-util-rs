@@ -6,6 +6,7 @@ mod gitattributes;
 
 use crate::{log_error, log_warn, Logged};
 use std::borrow::Cow;
+use std::fs::File;
 use std::io::{Error, Write};
 use std::path::PathBuf;
 
@@ -217,6 +218,38 @@ pub fn list() -> Result<(), Logged> {
         println!();
     }
     Ok(())
+}
+
+pub fn gen_tmp() {
+    for (name, template) in get_templates() {
+        println!("Generating Template: {}", name);
+        let Template { extra_args_info, files } = template();
+        let mut args = Args {
+            gradle: "$(gradle)".to_string(),
+            group: "$(group)".to_string(),
+            artifact: "$(artifact)".to_string(),
+            package: "$(package)".to_string(),
+            package_path: "$(package)".to_string(),
+            version: "$(version)".to_string(),
+            jvm: "$(jvm)".to_string(),
+            java_jvm: "$(java_jvm)".to_string(),
+            extras: index_map_with_capacity(extra_args_info.len()),
+        };
+        let mut file = File::create("./templates/".to_string() + &name + ".toml").unwrap();
+        if !extra_args_info.is_empty() {
+            for (k, v) in extra_args_info {
+                args.extras.insert(k.to_string(), v.default.unwrap().to_string());
+            }
+        }
+        
+        for template_file in files() {
+            writeln!(file, "[[file]]").unwrap();
+            writeln!(file, "path = \"{}\"", (template_file.path)(&args)).unwrap();
+            write!(file, "content = \"\"\"").unwrap();
+            (template_file.write_content)(&args, &mut file).unwrap();
+            writeln!(file, "\"\"\"\n").unwrap();
+        }
+    }
 }
 
 pub fn new(
