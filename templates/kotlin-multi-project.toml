@@ -1,4 +1,5 @@
 [args]
+subproject = { description = "Name of the subproject, should be different from the artifact" }
 wrapper = { description = "Gradle wrapper version", default = "7.3.3" }
 targetJvm = { default = "17" }
 kotlin = { description = "Kotlin version", default = "1.6.20" }
@@ -9,43 +10,15 @@ content = """distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
 distributionUrl=https\\://services.gradle.org/distributions/gradle-$(wrapper)-bin.zip
 zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists"""
-
-[[files]]
-path = "buildSrc/build.gradle.kts"
-content = """plugins {
-    `kotlin-dsl`
-}
-
-repositories {
-    mavenCentral()
-}
+zipStorePath=wrapper/dists
 """
 
 [[files]]
-path = "buildSrc/settings.gradle.kts"
-content = """rootProject.name = "buildSrc"
-"""
-
-[[files]]
-path = "buildSrc/src/main/kotlin/Versions.kt"
-content = """object Versions {
-    const val kotlin = "$(kotlin)"
-}"""
-
-[[files]]
-path = "build.gradle.kts"
+path = "$(subproject)/build.gradle.kts"
 content = """import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version Versions.kotlin
-}
-
-group = "$(group)"
-version = "$(version)"
-
-repositories {
-    mavenCentral()
+    kotlin("jvm")
 }
 
 dependencies {
@@ -66,8 +39,53 @@ tasks.withType<KotlinCompile> {
 """
 
 [[files]]
+path = "buildSrc/build.gradle.kts"
+content = """plugins {
+    `kotlin-dsl`
+}
+
+repositories {
+    mavenCentral()
+}
+"""
+
+[[files]]
+path = "buildSrc/settings.gradle.kts"
+content = """rootProject.name = "buildSrc"
+"""
+
+[[files]]
+path = "buildSrc/gradle.properties"
+content = """kotlin.code.style=official
+"""
+
+[[files]]
+path = "buildSrc/src/main/kotlin/Versions.kt"
+content = """object Versions {
+    const val kotlin = "$(kotlin)"
+}"""
+
+[[files]]
+path = "build.gradle.kts"
+content = """plugins {
+    kotlin("jvm") version Versions.kotlin apply false
+}
+
+group = "$(group)"
+version = "$(version)"
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+"""
+
+[[files]]
 path = "settings.gradle.kts"
 content = """rootProject.name = "$(artifact)"
+
+include("$(subproject)")
 
 // https://twitter.com/Louis_CAD/status/1498270951175299080?s=20&t=uv0XxtYQzbktJTcpvnJ6Wg
 rootDir.resolve("gradle.properties").copyTo(
@@ -82,7 +100,7 @@ content = """kotlin.code.style=official
 """
 
 [[files]]
-path = "src/test/kotlin/$(packagePath)/SimpleTest.kt"
+path = "$(subproject)/src/test/kotlin/$(packagePath)/SimpleTest.kt"
 content = """package $(package)
 
 import kotlin.test.*
@@ -95,9 +113,10 @@ class SimpleTest {
 }"""
 
 [[files]]
-path = "src/main/kotlin/$(packagePath)/main.kt"
+path = "$(subproject)/src/main/kotlin/$(packagePath)/main.kt"
 content = """package $(package)
 
 fun main() {
     println("Hello, world!")
 }"""
+

@@ -1,12 +1,17 @@
-[[file]]
+[args]
+wrapper = { description = "Gradle wrapper version", default = "7.3.3" }
+targetJvm = { default = "17" }
+junitJupiter = { description = "junitJupiter version", default = "5.8.1" }
+
+[[files]]
 path = "gradle/wrapper/gradle-wrapper.properties"
 content = """distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionUrl=https\\://services.gradle.org/distributions/gradle-$(gradle)-bin.zip
+distributionUrl=https\\://services.gradle.org/distributions/gradle-$(wrapper)-bin.zip
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists"""
 
-[[file]]
+[[files]]
 path = "buildSrc/build.gradle.kts"
 content = """plugins {
     `kotlin-dsl`
@@ -17,18 +22,18 @@ repositories {
 }
 """
 
-[[file]]
+[[files]]
 path = "buildSrc/settings.gradle.kts"
 content = """rootProject.name = "buildSrc"
 """
 
-[[file]]
+[[files]]
 path = "buildSrc/src/main/kotlin/Versions.kt"
 content = """object Versions {
-    const val junitJupiter = "5.8.1"
+    const val junitJupiter = "$(junitJupiter)"
 }"""
 
-[[file]]
+[[files]]
 path = "build.gradle.kts"
 content = """plugins {
     id("java")
@@ -42,8 +47,8 @@ repositories {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_$(java_jvm)
-    targetCompatibility = JavaVersion.VERSION_$(java_jvm)
+    sourceCompatibility = JavaVersion.VERSION_$(targetJvmJava)
+    targetCompatibility = JavaVersion.VERSION_$(targetJvmJava)
 }
 
 dependencies {
@@ -55,11 +60,11 @@ tasks.getByName<Test>("test") {
     useJUnitPlatform()
 }"""
 
-[[file]]
+[[files]]
 path = "gradle.properties"
 content = """"""
 
-[[file]]
+[[files]]
 path = "settings.gradle.kts"
 content = """rootProject.name = "$(artifact)"
 
@@ -70,8 +75,8 @@ rootDir.resolve("gradle.properties").copyTo(
 )
 """
 
-[[file]]
-path = "src/test/java/$(package)/TestExample.java"
+[[files]]
+path = "src/test/java/$(packagePath)/TestExample.java"
 content = """package $(package);
 import org.junit.jupiter.api.Test;
 
@@ -85,8 +90,8 @@ public class TestExample {
 }
 """
 
-[[file]]
-path = "src/main/java/$(package)/Main.java"
+[[files]]
+path = "src/main/java/$(packagePath)/Main.java"
 content = """package $(package);
 
 public class Main {
@@ -95,4 +100,3 @@ public class Main {
     }
 }
 """
-

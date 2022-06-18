@@ -1,257 +1,138 @@
-mod grpc_vertx_kotlin;
-mod kotlin_project;
-mod project;
-mod git_ignore;
-mod gitattributes;
+mod args;
+mod template_file;
 
+use crate::templates::template_file::{Template, TemplateInfoOnly};
 use crate::{log_error, log_warn, Logged};
-use std::borrow::Cow;
-use std::fs::File;
-use std::io::{Error, Write};
+use fxhash::FxHashMap;
+use std::ffi::OsString;
 use std::path::PathBuf;
 
-const JAVA_KEYWORDS: phf::Set<&'static str> = phf::phf_set!{"abstract", "continue", "for", "new", "switch", "assert", "default", "goto", "package", "synchronized", "boolean", "do", "if", "private", "this", "break", "double", "implements", "protected", "throw", "byte", "else", "import", "public", "throws", "case", "enum", "instanceof", "return", "transient", "catch", "extends", "int", "short", "try", "char", "final", "interface", "static", "void", "class", "finally", "long", "strictfp", "volatile", "const", "float", "native", "super", "while"};
-const KOTLIN_HARD_KEYWORDS: phf::Set<&'static str> = phf::phf_set!{"as", "break", "class", "continue", "do", "else", "false", "for", "fun", "if", "in", "interface", "is", "null", "object", "package", "return", "super", "this", "throw", "true", "try", "typealias", "typeof", "val", "var", "when", "while"};
-
-const PACKAGE_ERR_PREFIX: &str = "default package name invalid and cannot be fixed";
-const PACKAGE_ERR_SUFFIX: &str = "please assign the package";
-
 type IndexMapString<V> = indexmap::IndexMap<String, V, fxhash::FxBuildHasher>;
-fn index_map_with_capacity<V>(size: usize) -> IndexMapString<V> {
-    IndexMapString::with_capacity_and_hasher(size, fxhash::FxBuildHasher::default())
+
+fn get_template_paths() -> Vec<PathBuf> {
+    let mut paths = vec![];
+    if let Ok(path_current) = std::env::current_exe() {
+        let mut path = path_current;
+        path.pop();
+        path.push("templates");
+        paths.push(path);
+    }
+    if let Some(home) = dirs::home_dir() {
+        let mut path = home;
+        path.push(".gur/templates");
+        paths.push(path);
+    }
+    if let Ok(paths_str) = std::env::var("GUR_TEMPLATES_PATH") {
+        for path in paths_str.split(':') {
+            paths.push(PathBuf::from(path));
+        }
+    }
+    paths
 }
 
-struct TemplateFile {
-    pub path: fn(&Args) -> Cow<'static, str>,
-    pub write_content: fn(&Args, w: &mut dyn Write) -> Result<(), Error>,
-}
+fn load_templates_info(paths: &[PathBuf]) -> FxHashMap<String, TemplateInfoOnly> {
+    let mut templates = FxHashMap::default();
 
-struct Template {
-    pub extra_args_info: IndexMapString<ArgInfo>,
-    pub files: fn() -> Vec<TemplateFile>,
-}
-
-struct Args {
-    gradle: String,
-    group: String,
-    artifact: String,
-    package: String,
-    package_path: String,
-    version: String,
-    jvm: String,
-    java_jvm: String,
-    extras: IndexMapString<String>,
-}
-#[derive(Default)]
-struct PackageInfo {
-    package: String,
-    package_path: String,
-}
-impl Args {
-    fn from_vec(args: Vec<(String, String)>) -> Result<Self, Logged> {
-        let mut r = Self {
-            gradle: "".to_string(),
-            group: "".to_string(),
-            artifact: "".to_string(),
-            package: "".to_string(),
-            package_path: "".to_string(),
-            version: "".to_string(),
-            jvm: "".to_string(),
-            java_jvm: "".to_string(),
-            extras: index_map_with_capacity(0),
-        };
-        for (k, v) in args {
-            match k.as_str() {
-                "gradle" => r.gradle = v,
-                "group" => r.group = v,
-                "artifact" => r.artifact = v,
-                "package" => r.package = v,
-                "version" => r.version = v,
-                "jvm" => r.jvm = v,
-                _ => {
-                    r.extras.insert(k, v);
+    for path in paths {
+        if let Ok(entries) = std::fs::read_dir(path) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if let Some(ext) = path.extension() {
+                        if ext == "toml" {
+                            let template_name =
+                                path.file_stem().unwrap().to_string_lossy().to_string();
+                            if !templates.contains_key(&template_name) {
+                                if let Ok(file_content) = std::fs::read(path) {
+                                    if let Ok(template) = toml::from_slice(&file_content) {
+                                        templates.insert(template_name, template);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
-        if r.gradle.is_empty() {
-            r.gradle = "7.3.3".to_string();
-        }
-        if r.group.is_empty() {
-            return Err(log_error(format_args!("missing argument: group")));
-        }
-        if r.artifact.is_empty() {
-            return Err(log_error(format_args!("missing argument: artifact")));
-        }
-        if r.version.is_empty() {
-            return Err(log_error(format_args!("missing argument: version")));
-        }
-        let PackageInfo { package, package_path } = if r.package.is_empty() {
-            Self::get_package(&r.group, &r.artifact)
-        } else {
-            Self::analysis_package(&r.package)
-        }?;
-        r.package = package;
-        r.package_path = package_path;
-
-        if r.jvm.is_empty() {
-            r.jvm = "17".to_string();
-        }
-        r.java_jvm = r.jvm.replace('.', "_");
-        Ok(r)
     }
-    fn analysis_package(package: &str) -> Result<PackageInfo, Logged> {
-        let mut package_info = PackageInfo::default();
-        let mut first = true;
-
-        for item in package.split('.') {
-            let item = Self::fix_package_item(item)?;
-            if !first {
-                package_info.package.push('.');
-                package_info.package_path.push('/');
-            }
-            first = false;
-
-            package_info.package.push_str(&item);
-            package_info.package_path.push_str(&item);
-        }
-        Ok(package_info)
-    }
-    fn get_package(group: &str, artifact: &str) -> Result<PackageInfo, Logged> {
-        let mut package_info = PackageInfo::default();
-
-        for group_path in group.split('.') {
-            let item = Self::fix_package_item(group_path)?;
-
-            package_info.package.push_str(&item);
-            package_info.package.push('.');
-
-            package_info.package_path.push_str(&item);
-            package_info.package_path.push('/');
-        }
-        let item = Self::fix_package_item(artifact)?;
-        package_info.package.push_str(&item);
-        package_info.package_path.push_str(&item);
-        Ok(package_info)
-    }
-
-    // Fix the package item https://docs.oracle.com/javase/tutorial/java/package/namingpkgs.html
-    // It assumes the `item` is either extracted from a valid group or a valid name.
-    // Which means it should not be empty.
-    fn fix_package_item(item: &str) -> Result<String, Logged> {
-        // Note: we can actually use kotlin keyword in package,
-        // but in the code it need to be wrapped in ``.
-        // This makes the logic very complicated so we just change it.
-        if JAVA_KEYWORDS.contains(item) || KOTLIN_HARD_KEYWORDS.contains(item) {
-            return Ok(format!("{}_", item))
-        }
-
-        let mut item_chars = item.chars();
-        let first = item_chars.next();
-        let mut result: String;
-        if let Some(first) = first {
-            if first.is_numeric() {
-                result = String::with_capacity(item.len() + 1);
-                result.push('_');
-                result.push(first);
-            } else {
-                result = String::with_capacity(item.len());
-                result.push(Self::fix_non_numeric_char(first)?);
-            }
-        } else {
-            return Err(log_error(format_args!("{}, empty item found in package, {}", PACKAGE_ERR_PREFIX, PACKAGE_ERR_SUFFIX)))
-        };
-
-        for ch in item_chars {
-            if ch.is_numeric() {
-                result.push(ch)
-            } else {
-                result.push(Self::fix_non_numeric_char(ch)?)
-            }
-        }
-
-        Ok(result)
-    }
-
-    fn fix_non_numeric_char(ch: char) -> Result<char, Logged> {
-        if ch.is_alphabetic() {
-            Ok(ch.to_ascii_lowercase())
-        } else if ch == '-' {
-            Ok('_')
-        } else {
-            Err(log_error(format_args!("{}, invalid char `{}` found in package, {}", PACKAGE_ERR_PREFIX, ch, PACKAGE_ERR_SUFFIX)))
-        }
-    }
+    templates
 }
 
-struct ArgInfo {
-    pub default: Option<&'static str>,
-    pub description: &'static str,
+fn load_template(paths: Vec<PathBuf>, template: &str) -> Option<(Template, PathBuf)> {
+    for path in paths {
+        let mut path = path;
+        path.push(template);
+        path.set_extension("toml");
+        if let Ok(file_content) = std::fs::read(&path) {
+            if let Ok(template) = toml::from_slice(&file_content) {
+                return Some((template, path));
+            }
+        }
+    }
+    None
 }
 
-fn get_templates() -> IndexMapString<fn() -> Template> {
-    let mut result: IndexMapString<fn() -> Template> = index_map_with_capacity(3);
-    result.insert("project".into(), project::create_template);
-    result.insert("kotlin-project".into(), kotlin_project::create_template);
-    result.insert(
-        "grpc-vertx-kotlin".into(),
-        grpc_vertx_kotlin::create_template,
-    );
+fn load_shared(template_path: PathBuf) -> FxHashMap<OsString, Vec<u8>> {
+    let mut result = FxHashMap::default();
+
+    let mut shared_path = template_path;
+    shared_path.pop();
+    shared_path.push("shared");
+    if let Ok(entries) = std::fs::read_dir(shared_path) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if let Some(template_name) = path.file_name() {
+                    if !result.contains_key(template_name) {
+                        if let Ok(file_content) = std::fs::read(&path) {
+                            result.insert(template_name.to_os_string(), file_content);
+                        }
+                    }
+                }
+            }
+        }
+    }
     result
 }
-
 pub fn list() -> Result<(), Logged> {
-    for (name, template) in get_templates() {
+    for (name, template) in load_templates_info(&get_template_paths()) {
         println!("Template: {}", name);
         println!("Args:");
-        println!(
-            "    gradle: Gradle version, default to 7.3.3
-    group: Project groupId
-    artifact: Project artifactId
-    package: Project root package, default to <group>.<artifact> and tries to fix the invalid part
-    version: Project version
-    jvm: Java version, default to 17"
-        );
-        template()
-            .extra_args_info
-            .iter()
-            .for_each(|(k, v)| println!("    {}: {}", k, v.description));
+        args::print_args_list(template.args);
         println!();
     }
     Ok(())
 }
 
-pub fn gen_tmp() {
-    for (name, template) in get_templates() {
-        println!("Generating Template: {}", name);
-        let Template { extra_args_info, files } = template();
-        let mut args = Args {
-            gradle: "$(gradle)".to_string(),
-            group: "$(group)".to_string(),
-            artifact: "$(artifact)".to_string(),
-            package: "$(package)".to_string(),
-            package_path: "$(package)".to_string(),
-            version: "$(version)".to_string(),
-            jvm: "$(jvm)".to_string(),
-            java_jvm: "$(java_jvm)".to_string(),
-            extras: index_map_with_capacity(extra_args_info.len()),
-        };
-        let mut file = File::create("./templates/".to_string() + &name + ".toml").unwrap();
-        if !extra_args_info.is_empty() {
-            for (k, v) in extra_args_info {
-                args.extras.insert(k.to_string(), v.default.unwrap().to_string());
+fn apply_args(s: &str, args: &FxHashMap<String, String>) -> Result<String, Logged> {
+    const TEMPLATE_ISSUE: &str = "This is the issue of the template author.";
+
+    let mut result = String::new();
+    let mut rest = s;
+    while let Some(i) = rest.find("$(") {
+        result.push_str(&rest[..i]);
+        rest = &rest[i + 2..];
+        if let Some(j) = rest.find(')') {
+            let key = &rest[..j];
+            if let Some(value) = args.get(key) {
+                result.push_str(value);
+            } else {
+                return Err(log_error(format_args!(
+                    "unknown argument in template: {}. {}",
+                    key, TEMPLATE_ISSUE
+                )));
             }
-        }
-        
-        for template_file in files() {
-            writeln!(file, "[[file]]").unwrap();
-            writeln!(file, "path = \"{}\"", (template_file.path)(&args)).unwrap();
-            write!(file, "content = \"\"\"").unwrap();
-            (template_file.write_content)(&args, &mut file).unwrap();
-            writeln!(file, "\"\"\"\n").unwrap();
+            rest = &rest[j + 1..];
+        } else {
+            return Err(log_error(format_args!(
+                "illegal argument in template. {}",
+                TEMPLATE_ISSUE
+            )));
         }
     }
+    result.push_str(rest);
+    Ok(result)
 }
-
 pub fn new(
     name: String,
     output: PathBuf,
@@ -267,26 +148,22 @@ pub fn new(
         return Err(log_error(format_args!("output directory already exists")));
     }
 
-    let templates = get_templates();
-    let template = templates
-        .get(&name)
+    let (template, path) = load_template(get_template_paths(), &name)
         .ok_or_else(|| log_error(format_args!("template {} not found", name)))?;
-    let template: Template = template();
+    let shared_files = load_shared(path);
+    let args = args::get_args(defines, template.args)?;
 
-    let mut args = Args::from_vec(defines)?;
-    for (k, v) in template.extra_args_info {
-        if !args.extras.contains_key(&k) {
-            if let Some(d) = v.default {
-                args.extras.insert(k, d.to_string());
-            } else {
-                return Err(log_error(format_args!("missing argument: {}", k)));
-            }
-        }
-    }
-    let files = (template.files)();
-    for template_file in files {
+    std::fs::create_dir_all(&output)
+        .map_err(|e| log_error(format_args!("failed to create output directory: {}", e)))?;
+    for (shared_file_name, file_content) in shared_files {
         let mut file_path = PathBuf::from(&output);
-        file_path.push((template_file.path)(&args).as_ref());
+        file_path.push(shared_file_name);
+        std::fs::write(file_path, file_content)
+            .map_err(|e| log_error(format_args!("failed to write file: {}", e)))?;
+    }
+    for template_file in template.files {
+        let mut file_path = PathBuf::from(&output);
+        file_path.push(apply_args(&template_file.path, &args)?);
         let dir = file_path.parent().unwrap();
         std::fs::create_dir_all(&dir).map_err(|err| {
             log_error(format_args!(
@@ -302,20 +179,8 @@ pub fn new(
             ));
             continue;
         }
-        let mut file = std::fs::File::create(&file_path).map_err(|err| {
-            log_error(format_args!(
-                "failed to create file {}: {}",
-                file_path.display(),
-                err
-            ))
-        })?;
-        (template_file.write_content)(&args, &mut file).map_err(|err| {
-            log_error(format_args!(
-                "failed to write file {}: {}",
-                file_path.display(),
-                err
-            ))
-        })?;
+        std::fs::write(file_path, apply_args(&template_file.content, &args)?)
+            .map_err(|e| log_error(format_args!("failed to write file: {}", e)))?;
     }
     println!(
         "Finished. Please execute `wrapper` gradle task either via gradle CLI or in your IDE."

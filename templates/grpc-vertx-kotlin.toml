@@ -1,5 +1,17 @@
-[[file]]
-path = "protos/build.gradle.kts"
+[args]
+targetJvm = { default = "17" }
+wrapper = { description = "Gradle wrapper version", default = "7.3.3" }
+kotlin = { description = "Kotlin version", default = "1.6.20" }
+protobufPlugin = { description = "Protobuf Plugin (com.google.protobuf) version", default = "0.8.18" }
+shadow = { description = "Shadow Plugin (com.github.johnrengelman.shadow) version", default = "7.0.0" }
+vertx = { description = "Vert.x version", default = "4.2.7" }
+junitJupiter = { description = "junitJupiter version", default = "5.7.0" }
+grpc = { description = "gRPC version", default = "1.44.0" }
+grpcKotlin = { description = "gRPC Kotlin (io.grpc:grpc-kotlin-stub) version", default = "1.2.1" }
+protobuf = { description = "Protobuf version", default = "3.19.2" }
+
+[[files]]
+path = "$(artifact)-protos/build.gradle.kts"
 content = """plugins {
     `java-library`
 }
@@ -9,8 +21,8 @@ java {
 }
 """
 
-[[file]]
-path = "protos/src/main/proto/$(package)/greeting.proto"
+[[files]]
+path = "$(artifact)-protos/src/main/proto/$(packagePath)/greeting.proto"
 content = """syntax = "proto3";
 
 option java_multiple_files = true;
@@ -32,8 +44,8 @@ message GreetResponse {
 }
 """
 
-[[file]]
-path = "server/build.gradle.kts"
+[[files]]
+path = "$(artifact)-server/build.gradle.kts"
 content = """import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.tasks.testing.logging.TestLogEvent.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -59,7 +71,7 @@ application {
 }
 
 dependencies {
-    implementation(project(":stub"))
+    implementation(project(":$(artifact)-stub"))
     implementation(platform("io.vertx:vertx-stack-depchain:${Versions.vertx}"))
     implementation("io.vertx:vertx-grpc")
     implementation("io.vertx:vertx-lang-kotlin-coroutines")
@@ -68,11 +80,11 @@ dependencies {
 }
 
 val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions.jvmTarget = "$(jvm)"
+compileKotlin.kotlinOptions.jvmTarget = "$(targetJvm)"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_$(java_jvm)
-    targetCompatibility = JavaVersion.VERSION_$(java_jvm)
+    sourceCompatibility = JavaVersion.VERSION_$(targetJvmJava)
+    targetCompatibility = JavaVersion.VERSION_$(targetJvmJava)
 }
 
 tasks.withType<ShadowJar> {
@@ -101,8 +113,8 @@ tasks.withType<JavaExec> {
 }
 """
 
-[[file]]
-path = "server/src/test/kotlin/$(package)/TestMainVerticle.kt"
+[[files]]
+path = "$(artifact)-server/src/test/kotlin/$(packagePath)/TestMainVerticle.kt"
 content = """package $(package)
 
 import $(package).MainVerticle
@@ -128,8 +140,8 @@ class TestMainVerticle {
 }
 """
 
-[[file]]
-path = "server/src/main/kotlin/$(package)/GreetingServiceImpl.kt"
+[[files]]
+path = "$(artifact)-server/src/main/kotlin/$(packagePath)/GreetingServiceImpl.kt"
 content = """package $(package)
 
 class GreetingServiceImpl : GreetingServiceGrpcKt.GreetingServiceCoroutineImplBase() {
@@ -139,8 +151,8 @@ class GreetingServiceImpl : GreetingServiceGrpcKt.GreetingServiceCoroutineImplBa
             .build()
 }"""
 
-[[file]]
-path = "server/src/main/kotlin/$(package)/MainVerticle.kt"
+[[files]]
+path = "$(artifact)-server/src/main/kotlin/$(packagePath)/MainVerticle.kt"
 content = """package $(package)
 
 import io.vertx.core.AbstractVerticle
@@ -159,16 +171,16 @@ class MainVerticle : AbstractVerticle() {
 }
 """
 
-[[file]]
+[[files]]
 path = "gradle/wrapper/gradle-wrapper.properties"
 content = """distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionUrl=https\\://services.gradle.org/distributions/gradle-$(gradle)-bin.zip
+distributionUrl=https\\://services.gradle.org/distributions/gradle-$(wrapper)-bin.zip
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
 """
 
-[[file]]
+[[files]]
 path = "buildSrc/build.gradle.kts"
 content = """plugins {
     `kotlin-dsl`
@@ -179,31 +191,34 @@ repositories {
 }
 """
 
-[[file]]
+[[files]]
 path = "buildSrc/settings.gradle.kts"
 content = """rootProject.name = "buildSrc"
 """
 
-[[file]]
+[[files]]
 path = "buildSrc/src/main/kotlin/Versions.kt"
 content = """object Versions {
-    const val kotlin = "1.6.20"
-    const val protobufPlugin = "0.8.18"
-    const val shadow = "7.0.0"
-    const val vertx = "4.2.7"
-    const val junitJupiter = "5.7.0"
-    const val grpc = "1.44.0"
-    const val grpcKotlin = "1.2.1"
-    const val protobuf = "3.19.2"
+    const val kotlin = "$(kotlin)"
+    const val protobufPlugin = "$(protobufPlugin)"
+    const val shadow = "$(shadow)"
+    const val vertx = "$(vertx)"
+    const val junitJupiter = "$(junitJupiter)"
+    const val grpc = "$(grpc)"
+    const val grpcKotlin = "$(grpcKotlin)"
+    const val protobuf = "$(protobuf)"
 }"""
 
-[[file]]
+[[files]]
 path = "build.gradle.kts"
 content = """plugins {
     id("com.google.protobuf") version Versions.protobufPlugin apply false
     kotlin("jvm") version Versions.kotlin apply false
     id("com.github.johnrengelman.shadow") version Versions.shadow apply false
 }
+
+group = "$(group)"
+version = "$(version)"
 
 allprojects {
     repositories {
@@ -214,8 +229,8 @@ allprojects {
 }
 """
 
-[[file]]
-path = "stub/build.gradle.kts"
+[[files]]
+path = "$(artifact)-stub/build.gradle.kts"
 content = """import com.google.protobuf.gradle.generateProtoTasks
 import com.google.protobuf.gradle.id
 import com.google.protobuf.gradle.plugins
@@ -228,7 +243,7 @@ plugins {
 }
 
 dependencies {
-    protobuf(project(":protos"))
+    protobuf(project(":$(artifact)-protos"))
 
     api("io.grpc:grpc-stub:${Versions.grpc}")
     api("io.grpc:grpc-protobuf:${Versions.grpc}")
@@ -247,14 +262,14 @@ sourceSets {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_$(java_jvm)
-    targetCompatibility = JavaVersion.VERSION_$(java_jvm)
+    sourceCompatibility = JavaVersion.VERSION_$(targetJvmJava)
+    targetCompatibility = JavaVersion.VERSION_$(targetJvmJava)
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().all {
     kotlinOptions {
         freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
-        jvmTarget = "$(jvm)"
+        jvmTarget = "$(targetJvm)"
     }
 }
 
@@ -283,7 +298,7 @@ protobuf {
     }
 }"""
 
-[[file]]
+[[files]]
 path = "settings.gradle.kts"
 content = """rootProject.name = "$(artifact)"
 
@@ -294,7 +309,7 @@ pluginManagement {
     }
 }
 
-include("stub", "protos", "client", "server")
+include("$(artifact)-stub", "$(artifact)-protos", "$(artifact)-client", "$(artifact)-server")
 
 // https://twitter.com/Louis_CAD/status/1498270951175299080?s=20&t=uv0XxtYQzbktJTcpvnJ6Wg
 rootDir.resolve("gradle.properties").copyTo(
@@ -303,12 +318,12 @@ rootDir.resolve("gradle.properties").copyTo(
 )
 """
 
-[[file]]
+[[files]]
 path = "gradle.properties"
 content = """kotlin.code.style=official"""
 
-[[file]]
-path = "client/build.gradle.kts"
+[[files]]
+path = "$(artifact)-client/build.gradle.kts"
 content = """import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.tasks.testing.logging.TestLogEvent.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -337,17 +352,17 @@ dependencies {
     implementation(platform("io.vertx:vertx-stack-depchain:${Versions.vertx}"))
     implementation("io.vertx:vertx-grpc")
     implementation("io.vertx:vertx-lang-kotlin-coroutines")
-    implementation(project(":stub"))
+    implementation(project(":$(artifact)-stub"))
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:${Versions.junitJupiter}")
 }
 
 val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions.jvmTarget = "$(jvm)"
+compileKotlin.kotlinOptions.jvmTarget = "$(targetJvm)"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_$(java_jvm)
-    targetCompatibility = JavaVersion.VERSION_$(java_jvm)
+    sourceCompatibility = JavaVersion.VERSION_$(targetJvmJava)
+    targetCompatibility = JavaVersion.VERSION_$(targetJvmJava)
 }
 
 tasks.withType<ShadowJar> {
@@ -376,8 +391,8 @@ tasks.withType<JavaExec> {
 }
 """
 
-[[file]]
-path = "client/src/test/kotlin/$(package)/TestMainVerticle.kt"
+[[files]]
+path = "$(artifact)-client/src/test/kotlin/$(packagePath)/TestMainVerticle.kt"
 content = """package $(package)
 
 import io.vertx.core.Vertx
@@ -403,8 +418,8 @@ class TestMainVerticle {
 }
 """
 
-[[file]]
-path = "client/src/main/kotlin/$(package)/MainVerticle.kt"
+[[files]]
+path = "$(artifact)-client/src/main/kotlin/$(packagePath)/MainVerticle.kt"
 content = """package $(package)
 
 import io.vertx.grpc.VertxChannelBuilder
@@ -425,4 +440,3 @@ class MainVerticle : CoroutineVerticle() {
     }
 }
 """
-

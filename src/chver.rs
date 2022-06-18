@@ -14,4 +14,3 @@ pub fn chver(project_dir: PathBuf, ver: String, yolo: bool) -> Result<(), Logged
     )?;
     Ok(())
 }
-

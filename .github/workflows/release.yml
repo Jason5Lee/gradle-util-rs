@@ -132,23 +132,26 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
+          cp -r ../../../templates .
           strip gur.exe
-          7z a ../../../${{ matrix.name }} gur.exe
+          7z a ../../../${{ matrix.name }} gur.exe templates
           cd -
 
       - name: Post Setup | Prepare artifacts [-nix]
         if: matrix.target != 'armv7-unknown-linux-gnueabihf' && matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
+          cp -r ../../../templates .
           strip gur
-          tar czvf ../../../${{ matrix.name }} gur
+          tar czvf ../../../${{ matrix.name }} gur templates
           cd -
 
       - name: Post Setup | Prepare artifacts [-nix]
         if: matrix.target == 'armv7-unknown-linux-gnueabihf'
         run: |
           cd target/${{ matrix.target }}/release
-          tar czvf ../../../${{ matrix.name }} gur
+          cp -r ../../../templates .
+          tar czvf ../../../${{ matrix.name }} gur templates
           cd -
 
       - name: Post Setup | Prepare checksums [Windows]
