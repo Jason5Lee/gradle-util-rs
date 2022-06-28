@@ -6,46 +6,18 @@ const KOTLIN_HARD_KEYWORDS: phf::Set<&'static str> = phf::phf_set! {"as", "break
 const PACKAGE_ERR_PREFIX: &str = "default package name invalid and cannot be fixed";
 const PACKAGE_ERR_SUFFIX: &str = "please assign the package";
 
-#[derive(Default)]
-pub(super) struct PackageInfo {
-    pub(super) package: String,
-    pub(super) package_path: String,
-}
-
-pub(super) fn analysis_package(package: &str) -> Result<PackageInfo, Logged> {
-    let mut package_info = PackageInfo::default();
-    let mut first = true;
-
-    for item in package.split('.') {
-        let item = fix_package_item(item)?;
-        if !first {
-            package_info.package.push('.');
-            package_info.package_path.push('/');
-        }
-        first = false;
-
-        package_info.package.push_str(&item);
-        package_info.package_path.push_str(&item);
-    }
-    Ok(package_info)
-}
-
-pub(super) fn get_package(group: &str, artifact: &str) -> Result<PackageInfo, Logged> {
-    let mut package_info = PackageInfo::default();
+pub(super) fn get_package(group: &str, artifact: &str) -> Result<String, Logged> {
+    let mut result = String::new();
 
     for group_path in group.split('.') {
         let item = fix_package_item(group_path)?;
 
-        package_info.package.push_str(&item);
-        package_info.package.push('.');
-
-        package_info.package_path.push_str(&item);
-        package_info.package_path.push('/');
+        result.push_str(&item);
+        result.push('.');
     }
     let item = fix_package_item(artifact)?;
-    package_info.package.push_str(&item);
-    package_info.package_path.push_str(&item);
-    Ok(package_info)
+    result.push_str(&item);
+    Ok(result)
 }
 
 // Fix the package item https://docs.oracle.com/javase/tutorial/java/package/namingpkgs.html
