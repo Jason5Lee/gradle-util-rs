@@ -1,10 +1,22 @@
 mod default_package;
 
-use std::collections::hash_map::Entry;
 use std::io::Write;
 use super::template_file::Args;
 use crate::{log_error, Logged};
 use fxhash::FxHashMap;
+
+const GROUP: &str = "group";
+const GROUP_DESCRIPTION: &str = "Project group ID";
+const ARTIFACT: &str = "artifact";
+const ARTIFACT_DESCRIPTION: &str = "Project artifact ID";
+const PACKAGE: &str = "package";
+const PACKAGE_DESCRIPTION: &str = "Project root package";
+const PACKAGE_DEFAULT_DESCRIPTION: &str = "If not specified, use <group>.<artifact> and try to fix the illegal part";
+const VERSION: &str = "version";
+const VERSION_DESCRIPTION: &str = "Project version";
+const DEFAULT_VERSION: &str = "1.0.0-SNAPSHOT";
+const TARGET_JVM: &str = "targetJvm";
+const TARGET_JVM_DESCRIPTION: &str = "Target JVM version";
 
 fn required(arg: &str) -> Result<String, Logged> {
     Err(log_error(format_args!("missing argument `{}`", arg)))
@@ -14,7 +26,7 @@ fn optional_default(value: Option<String>) -> impl FnOnce(&str) -> Result<String
     move |arg| match value { Some(v) => Ok(v), None => required(arg) }
 }
 
-fn read_arg(arg: &str, args: &mut FxHashMap<String, String>, default: impl FnOnce(&str) -> Result<String, Logged>, iterative: bool) -> Result<(), Logged> {
+fn read_arg(arg: &str, description: &str, args: &mut FxHashMap<String, String>, default: impl FnOnce(&str) -> Result<String, impl std::fmt::Display>, iterative: bool) -> Result<(), Logged> {
     let arg_ref = args.entry(arg.to_string()).or_insert(String::new());
 
     let candidate_value = if arg_ref.is_empty() {
@@ -24,7 +36,7 @@ fn read_arg(arg: &str, args: &mut FxHashMap<String, String>, default: impl FnOnc
     };
     let value = if iterative {
         let mut stdout = std::io::stdout().lock();
-        write!(stdout, "Enter {arg}").ok();
+        write!(stdout, "Enter {description}").ok();
         if let Ok(default) = &candidate_value {
             write!(stdout, " ({default})").ok();
         }
@@ -83,12 +95,12 @@ pub(super) fn get_args(
 }
 
 pub(super) fn print_args_list(args_info: Args) {
-    println!("    group: Project groupId
-    artifact: Project artifactId
-    package: Project root package. If not specified, use <group>.<artifact> and try to fix the illegal part
-    version: Project version");
+    println!("    {GROUP}: {GROUP_DESCRIPTION}
+    {ARTIFACT}: {ARTIFACT_DESCRIPTION}
+    {PACKAGE}: {PACKAGE_DESCRIPTION}. {PACKAGE_DEFAULT_DESCRIPTION}
+    {VERSION}: {VERSION_DESCRIPTION}, the default is {DEFAULT_VERSION}");
     if let Some(target_jvm) = args_info.target_jvm {
-        print!("    targetJvm: Target JVM version");
+        print!("    {TARGET_JVM}: {TARGET_JVM_DESCRIPTION}");
         if let Some(default) = target_jvm.default {
             print!(", the default is {}", default)
         }
