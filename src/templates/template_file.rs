@@ -17,7 +17,12 @@ pub(super) struct Args {
     pub args: IndexMapString<ArgInfo>,
 }
 #[derive(serde::Deserialize)]
+pub(super) struct TemplateDescriptionOnly {
+    pub description: String,
+}
+#[derive(serde::Deserialize)]
 pub(super) struct TemplateInfoOnly {
+    pub description: String,
     pub args: Args,
 }
 #[derive(serde::Deserialize)]

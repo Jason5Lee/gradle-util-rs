@@ -1,3 +1,5 @@
+description = "gRPC over Vert.x, with a client, a server and a protobuf sub-project"
+
 [args]
 targetJvm = { default = "17" }
 wrapper = { description = "Gradle wrapper version", default = "7.3.3" }

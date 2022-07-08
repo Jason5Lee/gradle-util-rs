@@ -7,6 +7,8 @@ use fxhash::FxHashMap;
 use std::ffi::OsString;
 use std::path::PathBuf;
 
+use self::template_file::TemplateDescriptionOnly;
+
 type IndexMapString<V> = indexmap::IndexMap<String, V, fxhash::FxBuildHasher>;
 
 fn get_template_paths() -> Vec<PathBuf> {
@@ -30,7 +32,7 @@ fn get_template_paths() -> Vec<PathBuf> {
     paths
 }
 
-fn load_templates_info(paths: &[PathBuf]) -> FxHashMap<String, TemplateInfoOnly> {
+fn load_templates_info(paths: &[PathBuf]) -> FxHashMap<String, TemplateDescriptionOnly> {
     let mut templates = FxHashMap::default();
 
     for path in paths {
@@ -58,7 +60,10 @@ fn load_templates_info(paths: &[PathBuf]) -> FxHashMap<String, TemplateInfoOnly>
     templates
 }
 
-fn load_template(paths: Vec<PathBuf>, template: &str) -> Option<(Template, PathBuf)> {
+fn load_template<D>(paths: Vec<PathBuf>, template: &str) -> Option<(D, PathBuf)>
+where
+    for<'a> D: serde::Deserialize<'a>,
+{
     for path in paths {
         let mut path = path;
         path.push(template);
@@ -96,8 +101,10 @@ fn load_shared(template_path: PathBuf) -> FxHashMap<OsString, Vec<u8>> {
 }
 pub fn list(name: Option<String>) -> Result<(), Logged> {
     if let Some(name) = name {
-        if let Some((template, _)) = load_template(get_template_paths(), &name) {
+        if let Some((template, _)) = load_template::<TemplateInfoOnly>(get_template_paths(), &name)
+        {
             println!("Template: {}", name);
+            println!("Description: {}", template.description);
             println!("Args:");
             args::print_args_list(template.args);
             println!();
@@ -106,10 +113,7 @@ pub fn list(name: Option<String>) -> Result<(), Logged> {
         }
     } else {
         for (name, template) in load_templates_info(&get_template_paths()) {
-            println!("Template: {}", name);
-            println!("Args:");
-            args::print_args_list(template.args);
-            println!();
+            println!("{}: {}", name, template.description);
         }
     }
 
@@ -161,7 +165,7 @@ pub fn new(
         return Err(log_error(format_args!("output directory already exists")));
     }
 
-    let (template, path) = load_template(get_template_paths(), &name)
+    let (template, path) = load_template::<Template>(get_template_paths(), &name)
         .ok_or_else(|| log_error(format_args!("template {} not found", name)))?;
     let shared_files = load_shared(path);
     let args = args::get_args(iterative, defines, template.args)?;

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 #[derive(Parser)]
-#[clap(name = "gur", version = "0.1.0-alpha.5", about = "A Gradle utility")]
+#[clap(name = "gur", version = "0.1.0-alpha.6", about = "A Gradle utility")]
 struct Cli {
     #[clap(subcommand)]
     command: Command,

@@ -6,7 +6,7 @@ Note that this project is still in the alpha stage. The functionalities and beha
 
 ## Install
 
-You can find the pre-built binaries at the [release page](https://github.com/jason5lee/gradle-util-rs/releases). You can build and install it via `cargo install gradle-util-rs --version 0.1.0-alpha.5`.
+You can find the pre-built binaries at the [release page](https://github.com/jason5lee/gradle-util-rs/releases). You can build and install it via `cargo install gradle-util-rs --version 0.1.0-alpha.6`.
 
 ## Usage
 
@@ -55,6 +55,7 @@ The generated project has the following features:
 Example:
 
 * List all the templates: `gur template list`
+* List the information of a specific template: `gur template list <template name>`
 * Create a project from the template: `gur template create <template-name> -o <project path> -D<arg>=<value>`
 
 The templates are stored as toml files. It will try to find these files from

@@ -1,3 +1,5 @@
+description = "Multi-projects project using Kotlin language"
+
 [args]
 subproject = { description = "Name of the subproject, should be different from the artifact" }
 wrapper = { description = "Gradle wrapper version", default = "7.3.3" }
