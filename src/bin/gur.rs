@@ -64,6 +64,8 @@ enum TemplateCommands {
     New {
         #[clap(required = true, help = "The template name")]
         name: String,
+        #[clap(short, long, help = "Use iterative mode")]
+        iterative: bool,
         #[clap(short, long, parse(from_os_str), help = "The output directory")]
         output: PathBuf,
         #[clap(short = 'D', parse(try_from_str = parse_key_val), multiple_occurrences(true), help = "Define the template arguments, e.g. -Dname=value")]
@@ -96,11 +98,19 @@ fn main() {
             TemplateCommands::List => gradle_util_rs::templates::list(),
             TemplateCommands::New {
                 name,
+                iterative,
                 output,
                 defines,
                 allow_exists,
                 overwrite,
-            } => gradle_util_rs::templates::new(name, output, defines, allow_exists, overwrite),
+            } => gradle_util_rs::templates::new(
+                name,
+                output,
+                defines,
+                allow_exists,
+                overwrite,
+                iterative,
+            ),
         },
     }
     .ignore_logged_error()

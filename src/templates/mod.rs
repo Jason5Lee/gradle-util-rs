@@ -139,6 +139,7 @@ pub fn new(
     defines: Vec<(String, String)>,
     allow_exists: bool,
     overwrite: bool,
+    iterative: bool,
 ) -> Result<(), Logged> {
     if allow_exists {
         if output.is_file() {
@@ -151,7 +152,7 @@ pub fn new(
     let (template, path) = load_template(get_template_paths(), &name)
         .ok_or_else(|| log_error(format_args!("template {} not found", name)))?;
     let shared_files = load_shared(path);
-    let args = args::get_args(defines, template.args)?;
+    let args = args::get_args(iterative, defines, template.args)?;
 
     std::fs::create_dir_all(&output)
         .map_err(|e| log_error(format_args!("failed to create output directory: {}", e)))?;
