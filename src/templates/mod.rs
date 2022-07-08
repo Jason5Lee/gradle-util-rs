@@ -94,13 +94,25 @@ fn load_shared(template_path: PathBuf) -> FxHashMap<OsString, Vec<u8>> {
     }
     result
 }
-pub fn list() -> Result<(), Logged> {
-    for (name, template) in load_templates_info(&get_template_paths()) {
-        println!("Template: {}", name);
-        println!("Args:");
-        args::print_args_list(template.args);
-        println!();
+pub fn list(name: Option<String>) -> Result<(), Logged> {
+    if let Some(name) = name {
+        if let Some((template, _)) = load_template(get_template_paths(), &name) {
+            println!("Template: {}", name);
+            println!("Args:");
+            args::print_args_list(template.args);
+            println!();
+        } else {
+            return Err(log_error(format_args!("tempate `{name}` not found")));
+        }
+    } else {
+        for (name, template) in load_templates_info(&get_template_paths()) {
+            println!("Template: {}", name);
+            println!("Args:");
+            args::print_args_list(template.args);
+            println!();
+        }
     }
+
     Ok(())
 }
 

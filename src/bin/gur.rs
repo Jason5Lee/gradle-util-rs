@@ -58,8 +58,11 @@ struct Template {
 }
 #[derive(Debug, Subcommand)]
 enum TemplateCommands {
-    #[clap(about = "List all the available templates")]
-    List,
+    #[clap(about = "List the template information")]
+    List {
+        #[clap(help = "The template name. List all templates if omitted.")]
+        name: Option<String>,
+    },
     #[clap(about = "Create a new project from a template")]
     New {
         #[clap(required = true, help = "The template name")]
@@ -95,7 +98,7 @@ fn main() {
             yolo,
         } => gradle_util_rs::chver::chver(project_dir, version, yolo),
         Command::Template(Template { command }) => match command {
-            TemplateCommands::List => gradle_util_rs::templates::list(),
+            TemplateCommands::List { name } => gradle_util_rs::templates::list(name),
             TemplateCommands::New {
                 name,
                 iterative,
