@@ -3,7 +3,7 @@ description = "Kotlin project"
 [args]
 wrapper = { description = "Gradle wrapper version", default = "7.3.3" }
 targetJvm = { default = "17" }
-kotlin = { description = "Kotlin version", default = "1.6.20" }
+kotlin = { description = "Kotlin version", default = "1.7.10" }
 
 [[files]]
 path = "gradle/wrapper/gradle-wrapper.properties"
