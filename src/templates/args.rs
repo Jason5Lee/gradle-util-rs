@@ -102,7 +102,7 @@ pub(super) fn get_args(
 
     read_arg("group", "Group ID", &mut result, None, iterative)?;
     read_arg("artifact", "Artifact ID", &mut result, None, iterative)?;
-    read_arg("version", "Version", &mut result, None, iterative)?;
+    read_arg("version", "Version", &mut result, Some(DEFAULT_VERSION.to_string()), iterative)?;
 
     read_package(&mut result, iterative)?;
     result.insert(
