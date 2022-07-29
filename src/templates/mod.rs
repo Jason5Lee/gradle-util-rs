@@ -60,7 +60,7 @@ fn load_templates_info(paths: &[PathBuf]) -> FxHashMap<String, TemplateDescripti
     templates
 }
 
-fn load_template<D>(paths: Vec<PathBuf>, template: &str) -> Option<(D, PathBuf)>
+fn load_template<D>(paths: Vec<PathBuf>, template: &str) -> Result<(D, PathBuf), Logged>
 where
     for<'a> D: serde::Deserialize<'a>,
 {
@@ -68,13 +68,23 @@ where
         let mut path = path;
         path.push(template);
         path.set_extension("toml");
-        if let Ok(file_content) = std::fs::read(&path) {
-            if let Ok(template) = toml::from_slice(&file_content) {
-                return Some((template, path));
+        match std::fs::read(&path) {
+            Ok(file_content) => {
+                return toml::from_slice(&file_content)
+                    .map(|template| (template, path))
+                    .map_err(|err| log_error(format_args!("template invalid: {}", err)))
+            }
+            Err(err) => {
+                if err.kind() != std::io::ErrorKind::NotFound {
+                    return Err(log_error(format_args!(
+                        "cannot open template file, {}",
+                        err
+                    )));
+                }
             }
         }
     }
-    None
+    Err(log_error(format_args!("tempate `{template}` not found")))
 }
 
 fn load_shared(template_path: PathBuf) -> FxHashMap<OsString, Vec<u8>> {
@@ -101,16 +111,12 @@ fn load_shared(template_path: PathBuf) -> FxHashMap<OsString, Vec<u8>> {
 }
 pub fn list(name: Option<String>) -> Result<(), Logged> {
     if let Some(name) = name {
-        if let Some((template, _)) = load_template::<TemplateInfoOnly>(get_template_paths(), &name)
-        {
-            println!("Template: {}", name);
-            println!("Description: {}", template.description);
-            println!("Args:");
-            args::print_args_list(template.args);
-            println!();
-        } else {
-            return Err(log_error(format_args!("tempate `{name}` not found")));
-        }
+        let (template, _) = load_template::<TemplateInfoOnly>(get_template_paths(), &name)?;
+        println!("Template: {}", name);
+        println!("Description: {}", template.description);
+        println!("Args:");
+        args::print_args_list(template.args);
+        println!();
     } else {
         for (name, template) in load_templates_info(&get_template_paths()) {
             println!("{}: {}", name, template.description);
@@ -157,6 +163,8 @@ pub fn new(
     overwrite: bool,
     iterative: bool,
 ) -> Result<(), Logged> {
+    let (template, path) = load_template::<Template>(get_template_paths(), &name)?;
+
     if allow_exists {
         if output.is_file() {
             return Err(log_error(format_args!("output path is a file")));
@@ -164,9 +172,7 @@ pub fn new(
     } else if output.exists() {
         return Err(log_error(format_args!("output directory already exists")));
     }
-
-    let (template, path) = load_template::<Template>(get_template_paths(), &name)
-        .ok_or_else(|| log_error(format_args!("template {} not found", name)))?;
+    
     let shared_files = load_shared(path);
     let args = args::get_args(iterative, defines, template.args)?;
 
