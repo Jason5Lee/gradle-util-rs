@@ -3,7 +3,10 @@ mod default_package;
 use super::template_file::Args;
 use crate::{log_error, Logged};
 use fxhash::FxHashMap;
-use std::io::{BufRead, Write};
+use std::{
+    io::{BufRead, Write},
+    path::PathBuf,
+};
 
 const GROUP: &str = "group";
 const GROUP_DESCRIPTION: &str = "Project group ID";
@@ -87,8 +90,9 @@ fn read_package(args: &mut FxHashMap<String, String>, iterative: bool) -> Result
 pub(super) fn get_args(
     iterative: bool,
     cmdline_args_value: Vec<(String, String)>,
+    output_path: Option<PathBuf>,
     args_info: Args,
-) -> Result<FxHashMap<String, String>, Logged> {
+) -> Result<(FxHashMap<String, String>, PathBuf), Logged> {
     let mut result = FxHashMap::default();
 
     let Args { target_jvm, args } = args_info;
@@ -102,7 +106,13 @@ pub(super) fn get_args(
 
     read_arg("group", "Group ID", &mut result, None, iterative)?;
     read_arg("artifact", "Artifact ID", &mut result, None, iterative)?;
-    read_arg("version", "Version", &mut result, Some(DEFAULT_VERSION.to_string()), iterative)?;
+    read_arg(
+        "version",
+        "Version",
+        &mut result,
+        Some(DEFAULT_VERSION.to_string()),
+        iterative,
+    )?;
 
     read_package(&mut result, iterative)?;
     result.insert(
@@ -134,7 +144,17 @@ pub(super) fn get_args(
         )?;
     }
     result.insert("dollar".to_string(), "$".to_string());
-    Ok(result)
+    let output_path = if iterative {
+        cli_read_arg(
+            format_args!("Output path"),
+            output_path.map(|p| p.display().to_string()),
+        )
+        .map_err(|err| log_error(format_args!("{err}")))?
+        .into()
+    } else {
+        output_path.ok_or_else(|| log_error(format_args!("missing output path")))?
+    };
+    Ok((result, output_path))
 }
 
 pub(super) fn print_args_list(args_info: Args) {

@@ -157,13 +157,15 @@ fn apply_args(s: &str, args: &FxHashMap<String, String>) -> Result<String, Logge
 }
 pub fn new(
     name: String,
-    output: PathBuf,
+    output: Option<PathBuf>,
     defines: Vec<(String, String)>,
     allow_exists: bool,
     overwrite: bool,
     iterative: bool,
 ) -> Result<(), Logged> {
     let (template, path) = load_template::<Template>(get_template_paths(), &name)?;
+    let shared_files = load_shared(path);
+    let (args, output) = args::get_args(iterative, defines, output, template.args)?;
 
     if allow_exists {
         if output.is_file() {
@@ -172,9 +174,6 @@ pub fn new(
     } else if output.exists() {
         return Err(log_error(format_args!("output directory already exists")));
     }
-    
-    let shared_files = load_shared(path);
-    let args = args::get_args(iterative, defines, template.args)?;
 
     std::fs::create_dir_all(&output)
         .map_err(|e| log_error(format_args!("failed to create output directory: {}", e)))?;

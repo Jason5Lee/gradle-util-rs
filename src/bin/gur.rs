@@ -70,7 +70,7 @@ enum TemplateCommands {
         #[clap(short, long, help = "Use iterative mode")]
         iterative: bool,
         #[clap(short, long, parse(from_os_str), help = "The output directory")]
-        output: PathBuf,
+        output: Option<PathBuf>,
         #[clap(short = 'D', parse(try_from_str = parse_key_val), multiple_occurrences(true), help = "Define the template arguments, e.g. -Dname=value")]
         defines: Vec<(String, String)>,
         #[clap(long, help = "Allow output directory to exist")]
