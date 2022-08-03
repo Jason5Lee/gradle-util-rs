@@ -3,7 +3,7 @@ description = "gRPC over Vert.x, with a client, a server and a protobuf sub-proj
 [args]
 targetJvm = { default = "17" }
 wrapper = { description = "Gradle wrapper version", default = "7.3.3" }
-kotlin = { description = "Kotlin version", default = "1.6.20" }
+kotlin = { description = "Kotlin version", default = "1.6.21" }
 protobufPlugin = { description = "Protobuf Plugin (com.google.protobuf) version", default = "0.8.18" }
 shadow = { description = "Shadow Plugin (com.github.johnrengelman.shadow) version", default = "7.0.0" }
 vertx = { description = "Vert.x version", default = "4.2.7" }
