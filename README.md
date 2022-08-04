@@ -6,7 +6,7 @@ Note that this project is still in the alpha stage. The functionalities and beha
 
 ## Install
 
-You can find the pre-built binaries at the [release page](https://github.com/jason5lee/gradle-util-rs/releases). You can build and install it via `cargo install gradle-util-rs --version 0.1.0-alpha.6`.
+You can find the pre-built binaries at the [release page](https://github.com/jason5lee/gradle-util-rs/releases). You can build and install it via `cargo install gradle-util-rs --version 0.1.0-alpha.7`.
 
 ## Usage
 
@@ -22,7 +22,6 @@ SUBCOMMANDS:
     chver       Change the gradle wrapper version
     help        Print this message or the help of the given subcommand(s)
     set-new     Watch for the new Gradle project and set the gradle version
-    template    Create project from the template
 ```
 
 ### `set-new`
