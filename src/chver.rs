@@ -1,10 +1,10 @@
-use crate::{run_gradlew_wrapper, utils, Logged};
+use crate::{run_gradlew_wrapper, utils};
 use std::path::PathBuf;
 use std::process::Stdio;
 
-pub fn chver(project_dir: PathBuf, ver: String, yolo: bool) -> Result<(), Logged> {
+pub fn chver(project_dir: PathBuf, ver: String, yolo: bool) -> anyhow::Result<()> {
     if yolo {
-        utils::write_wrapper_properties(utils::WRAPPER_PROPERTIES_PATH, &ver)?;
+        utils::create_dir_write_wrapper_properties(utils::WRAPPER_PROPERTIES_PATH, &ver)?;
     }
 
     run_gradlew_wrapper(
